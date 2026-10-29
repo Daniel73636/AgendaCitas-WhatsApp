@@ -4,33 +4,35 @@ PWA multiplataforma (**PC + Android**) para reservas públicas, panel del negoci
 
 Repositorio: https://github.com/Daniel73636/AgendaCitas-WhatsApp
 
-## Stack
+## Versión recomendada: `full-mvp/`
 
-- TypeScript
-- API Fastify modular (`apps/api`) — puerto **4001**
-- Next.js 15 App Router PWA (`apps/web`) — puerto **3001**
-- Dominio puro `@agenda/domain-booking` (`computeSlots`)
-- Persistencia JSON local (demo) + `docker-compose` Postgres/Redis listos para producción
-- WhatsApp Cloud API en modo **mock**
+MVP completo (NestJS + Next.js PWA, 66 tests). Ver también el PR: https://github.com/Daniel73636/AgendaCitas-WhatsApp/pull/1
 
-## Arranque rápido
+```bash
+cd full-mvp
+pnpm install
+pnpm test
+pnpm dev   # API :4100 + web :3100
+```
+
+- Pública: http://localhost:3100/belleza-demo
+- Panel: http://localhost:3100/login → cuenta demo (`admin@belleza-demo.com` / `demo1234`)
+- OTP: **123456**
+
+## Versión ligera (raíz del repo)
+
+API Fastify + store JSON (`apps/api` :4001, `apps/web` :3001). Útil como demo rápida.
 
 ```bash
 pnpm install
 pnpm --filter @agenda/db seed
-pnpm --filter @agenda/domain-booking test
 pnpm --filter @agenda/api dev
-# otra terminal
 pnpm --filter @agenda/web dev
 ```
 
-Abre:
-
 - Pública: http://localhost:3001/belleza-demo
-- Reservar: http://localhost:3001/belleza-demo/reservar
 - Panel: http://localhost:3001/panel/hoy
-
-OTP demo: **123456**
+- OTP: **123456**
 
 ## Multiplataforma
 
