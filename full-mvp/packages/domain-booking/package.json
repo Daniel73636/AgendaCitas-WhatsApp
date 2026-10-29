@@ -1,0 +1,22 @@
+{
+  "name": "@agenda/domain-booking",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dominio puro de reservas: computeSlots, zonas horarias, estados, recordatorios, politicas",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "fast-check": "^4.0.0",
+    "typescript": "~5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

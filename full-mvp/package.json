@@ -21,7 +21,8 @@
     "db:migrate": "pnpm --filter @agenda/db migrate",
     "db:seed": "pnpm --filter @agenda/db seed",
     "db:reset": "pnpm --filter @agenda/db reset",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
