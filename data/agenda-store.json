@@ -1,0 +1,307 @@
+{
+  "tenants": [
+    {
+      "id": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "name": "Belleza Demo",
+      "slug": "belleza-demo",
+      "timezone": "America/Bogota"
+    }
+  ],
+  "locations": [
+    {
+      "id": "a5ef9e06-3ad5-473d-bc9d-c221dcb015cf",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "name": "Sede Centro",
+      "address": "Cra 50 #45-10, Medellín",
+      "timezone": "America/Bogota"
+    }
+  ],
+  "staff": [
+    {
+      "id": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "locationId": "a5ef9e06-3ad5-473d-bc9d-c221dcb015cf",
+      "displayName": "Ana Pérez",
+      "active": true
+    },
+    {
+      "id": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "locationId": "a5ef9e06-3ad5-473d-bc9d-c221dcb015cf",
+      "displayName": "Carlos Ruiz",
+      "active": true
+    },
+    {
+      "id": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "locationId": "a5ef9e06-3ad5-473d-bc9d-c221dcb015cf",
+      "displayName": "Laura Gómez",
+      "active": true
+    }
+  ],
+  "services": [
+    {
+      "id": "8b484232-f9ff-4fc8-9d8d-d1351753e296",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "name": "Corte mujer",
+      "description": "Corte y brush",
+      "durationMin": 45,
+      "bufferBeforeMin": 0,
+      "bufferAfterMin": 10,
+      "priceCents": 45000,
+      "currency": "COP",
+      "depositCents": 0,
+      "capacity": 1,
+      "visiblePublic": true
+    },
+    {
+      "id": "7b3d3bc2-80d5-4032-866f-c8a37bd1fb56",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "name": "Coloración",
+      "description": "Tinte completo",
+      "durationMin": 90,
+      "bufferBeforeMin": 5,
+      "bufferAfterMin": 15,
+      "priceCents": 120000,
+      "currency": "COP",
+      "depositCents": 20000,
+      "capacity": 1,
+      "visiblePublic": true
+    },
+    {
+      "id": "233ce98c-cf46-476e-8f91-f24a375c1952",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "name": "Manicure",
+      "description": "Manicure clásico",
+      "durationMin": 40,
+      "bufferBeforeMin": 0,
+      "bufferAfterMin": 5,
+      "priceCents": 35000,
+      "currency": "COP",
+      "depositCents": 0,
+      "capacity": 1,
+      "visiblePublic": true
+    },
+    {
+      "id": "d4d42ab0-3ebe-4a04-8408-d18460450bec",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "name": "Pedicure",
+      "description": "Pedicure spa",
+      "durationMin": 50,
+      "bufferBeforeMin": 0,
+      "bufferAfterMin": 5,
+      "priceCents": 45000,
+      "currency": "COP",
+      "depositCents": 0,
+      "capacity": 1,
+      "visiblePublic": true
+    },
+    {
+      "id": "4a69d94f-e8b0-4726-9115-22058244e0bb",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "name": "Barba",
+      "description": "Perfilado de barba",
+      "durationMin": 25,
+      "bufferBeforeMin": 0,
+      "bufferAfterMin": 5,
+      "priceCents": 25000,
+      "currency": "COP",
+      "depositCents": 0,
+      "capacity": 1,
+      "visiblePublic": true
+    }
+  ],
+  "staffServices": [
+    {
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "serviceId": "8b484232-f9ff-4fc8-9d8d-d1351753e296"
+    },
+    {
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "serviceId": "7b3d3bc2-80d5-4032-866f-c8a37bd1fb56"
+    },
+    {
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "serviceId": "233ce98c-cf46-476e-8f91-f24a375c1952"
+    },
+    {
+      "staffId": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "serviceId": "8b484232-f9ff-4fc8-9d8d-d1351753e296"
+    },
+    {
+      "staffId": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "serviceId": "4a69d94f-e8b0-4726-9115-22058244e0bb"
+    },
+    {
+      "staffId": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "serviceId": "233ce98c-cf46-476e-8f91-f24a375c1952"
+    },
+    {
+      "staffId": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "serviceId": "d4d42ab0-3ebe-4a04-8408-d18460450bec"
+    }
+  ],
+  "schedules": [
+    {
+      "id": "b995e988-8427-41e2-b522-4c3adf43fd4e",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "weekday": 1,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "5929794d-35fc-4d05-ad65-ce492e8f8986",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "weekday": 2,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "073672ad-2627-4b74-98a7-cc9b74a61a8d",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "weekday": 3,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "4817b04f-d634-42ce-82f0-464c6bbe5167",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "weekday": 4,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "f3140c9c-7c64-436e-808e-7cc83155699e",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "weekday": 5,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "ee2090bd-2cc4-4fde-9ad4-cafe4ab3b65f",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "2fc68c2b-0d4f-4bbc-85f3-c253808311c1",
+      "weekday": 6,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "810b23ba-f924-4dec-b74b-97d3301a7f6a",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "weekday": 1,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "e146b593-09bf-467a-ae4d-9e20026ef083",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "weekday": 2,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "99ba0cc4-742f-4172-9b74-e6517b1764fb",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "weekday": 3,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "5d13a2ab-e590-4cc5-8ecf-3b76a2dcbcff",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "weekday": 4,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "9b012c32-70e6-45f2-a3bb-0635342d50b3",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "weekday": 5,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "059147bf-1203-41c7-8a1a-68862a06638b",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "1d693753-26cb-4cc3-a78f-25bafcb474fb",
+      "weekday": 6,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "b1b55d8c-3d36-4c1d-ad61-a0cc22445cec",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "weekday": 1,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "d13cf8cb-8cdb-4ec8-a406-b9fb761ad208",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "weekday": 2,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "202e9f26-b7b0-49d1-90c9-0ed1f309d02e",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "weekday": 3,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "25c783b2-5bbb-47af-8e9f-90e956541a71",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "weekday": 4,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "b8d09a92-65c7-4e93-8f78-80b98d06d413",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "weekday": 5,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "397a13a3-ddb6-4bfc-9cc6-e47c107355d0",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "staffId": "605a19ea-e909-43e3-82e3-e2d1d32cb284",
+      "weekday": 6,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    }
+  ],
+  "customers": [
+    {
+      "id": "9f83bf66-6954-47d5-9dd8-f85ca6d50c1a",
+      "tenantId": "405dc001-5b48-491c-89b6-6ee6f26ae20d",
+      "fullName": "María López",
+      "phoneE164": "+573001112233",
+      "noShowCount": 0,
+      "lateCancelCount": 0,
+      "tags": [
+        "vip"
+      ]
+    }
+  ],
+  "appointments": [],
+  "messages": [],
+  "otps": {},
+  "events": []
+}

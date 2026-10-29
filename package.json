@@ -1,0 +1,31 @@
+{
+  "name": "agenda-citas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agenda de citas con WhatsApp - MVP (monorepo pnpm)",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @agenda/api --filter @agenda/web dev",
+    "dev:api": "pnpm --filter @agenda/api dev",
+    "dev:web": "pnpm --filter @agenda/web dev",
+    "dev:worker": "pnpm --filter @agenda/worker dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:domain": "pnpm --filter @agenda/domain-booking test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @agenda/db migrate",
+    "db:seed": "pnpm --filter @agenda/db seed",
+    "db:reset": "pnpm --filter @agenda/db reset",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "~5.9.2",
+    "@types/node": "^22.10.0"
+  }
+}
