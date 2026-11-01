@@ -1,16 +1,20 @@
 'use client';
 import type { NoShowReport, OccupancyReport, ReportSummary, RevenueReport } from '@agenda/contracts';
 import { addDaysStr } from '@agenda/domain-booking';
-import { Card, CardContent, CardHeader, CardTitle, Skeleton, Stat, cn } from '@agenda/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, Skeleton, Stat, cn } from '@agenda/ui';
+import { Download } from 'lucide-react';
 import { useState } from 'react';
+import { api } from '@/lib/api';
 import { dayNumber, money, todayIn, weekdayShortN } from '@/lib/format';
 import { useAuthed, usePQuery } from '@/lib/panel';
+import { toast } from '@/lib/session';
 
-const RANGES = [{ days: 7, label: '7 dias' }, { days: 30, label: '30 dias' }, { days: 90, label: '90 dias' }];
+const RANGES = [{ days: 7, label: '7 días' }, { days: 30, label: '30 días' }, { days: 90, label: '90 días' }];
 
 export default function ReportsPage() {
-  const { tz, currency } = useAuthed();
+  const { tz, currency, token } = useAuthed();
   const [days, setDays] = useState(30);
+  const [exporting, setExporting] = useState(false);
   const to = todayIn(tz);
   const qs = `from=${addDaysStr(to, -(days - 1))}&to=${to}`;
   const sum = usePQuery<ReportSummary>(['report', 'summary', days], `/v1/reports/summary?${qs}`, { staleTime: 30_000 });
@@ -21,12 +25,33 @@ export default function ReportsPage() {
   const maxDay = Math.max(1, ...(rev.data?.byDay.map((d) => d.cents) ?? [0]));
   const maxRate = Math.max(0.01, ...(ns.data?.byWeekday.map((x) => (x.total ? x.noShows / x.total : 0)) ?? [0]));
 
+  async function downloadCsv() {
+    setExporting(true);
+    try {
+      const file = await api<{ filename: string; csv: string }>(`/v1/reports/export?${qs}`, { token });
+      const blob = new Blob([file.csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.filename;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo exportar');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Reportes</h1>
-        <div className="flex rounded-xl bg-muted p-1 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" loading={exporting} onClick={() => void downloadCsv()}><Download size={14} /> Exportar CSV</Button>
+          <div className="flex rounded-xl bg-muted p-1 text-sm">
           {RANGES.map((r) => <button key={r.days} onClick={() => setDays(r.days)} className={cn('rounded-lg px-3 py-1.5 font-medium', days === r.days && 'bg-card shadow-sm')}>{r.label}</button>)}
+          </div>
         </div>
       </div>
 
@@ -36,16 +61,16 @@ export default function ReportsPage() {
             <Stat label="Ingresos" value={money(s.revenueCents, currency)} hint={`Ticket promedio ${money(s.avgTicketCents, currency)}`} />
             <Stat label="Citas" value={s.totals.appointments} hint={`${s.totals.completed} completadas · ${s.totals.canceled} canceladas`} />
             <Stat label="Inasistencia" value={`${(s.noShowRate * 100).toFixed(1)}%`} hint={`${s.totals.noShow} no asistieron`} tone={s.noShowRate > 0.12 ? 'danger' : 'default'} />
-            <Stat label="Ocupacion" value={`${s.occupancyPct}%`} hint={`${s.newCustomers} clientes nuevos`} />
+            <Stat label="Ocupación" value={`${s.occupancyPct}%`} hint={`${s.newCustomers} clientes nuevos`} />
           </>
         )}
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Ingresos por dia</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Ingresos por día</CardTitle></CardHeader>
         <CardContent>
           {!rev.data ? <Skeleton className="h-40" /> : (
-            <div className="flex h-44 items-end gap-[3px]" role="img" aria-label="Grafico de ingresos por dia">
+            <div className="flex h-44 items-end gap-[3px]" role="img" aria-label="Gráfico de ingresos por día">
               {rev.data.byDay.map((d) => (
                 <div key={d.date} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={`${d.date}: ${money(d.cents, currency)} (${d.count} citas)`}>
                   <div className="w-full rounded-t bg-primary/80 transition group-hover:bg-primary" style={{ height: Math.max(2, Math.round((d.cents / maxDay) * 140)) }} />
@@ -59,7 +84,7 @@ export default function ReportsPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Mapa de calor de ocupacion</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Mapa de calor de ocupación</CardTitle></CardHeader>
           <CardContent>
             {!occ.data ? <Skeleton className="h-48" /> : <Heatmap data={occ.data.heatmap} />}
             <div className="mt-4 flex flex-col gap-2">
@@ -79,7 +104,7 @@ export default function ReportsPage() {
             {!ns.data ? <Skeleton className="h-40" /> : (
               <>
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Por dia de la semana</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Por día de la semana</p>
                   <div className="flex h-24 items-end gap-2">
                     {[1, 2, 3, 4, 5, 6, 0].map((d) => {
                       const x = ns.data.byWeekday[d]!;
@@ -94,7 +119,7 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Clientes con mas inasistencias</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Clientes con más inasistencias</p>
                   {ns.data.byCustomer.length === 0 ? <p className="text-sm text-muted-foreground">Sin inasistencias en el periodo 🎉</p> : (
                     <ul className="divide-y divide-border text-sm">
                       {ns.data.byCustomer.map((c) => <li key={c.customerId} className="flex justify-between py-1.5"><span>{c.name} <span className="text-xs text-muted-foreground">{c.phone}</span></span><b className="tabular-nums text-destructive">{c.noShows}</b></li>)}
@@ -136,7 +161,7 @@ function Heatmap({ data }: { data: number[][] }) {
   const hours = Array.from({ length: 14 }, (_, i) => i + 7);
   return (
     <div className="overflow-x-auto">
-      <div className="inline-grid gap-[3px]" style={{ gridTemplateColumns: `2.2rem repeat(${hours.length}, minmax(1.4rem, 1fr))` }} role="img" aria-label="Mapa de calor de ocupacion por dia y hora">
+      <div className="inline-grid gap-[3px]" style={{ gridTemplateColumns: `2.2rem repeat(${hours.length}, minmax(1.4rem, 1fr))` }} role="img" aria-label="Mapa de calor de ocupación por día y hora">
         <span />
         {hours.map((h) => <span key={h} className="text-center text-[10px] text-muted-foreground">{h}</span>)}
         {[1, 2, 3, 4, 5, 6, 0].map((d) => (
@@ -149,7 +174,7 @@ function Heatmap({ data }: { data: number[][] }) {
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[11px] text-muted-foreground">Mas oscuro = mas ocupado. Gris = fuera de horario.</p>
+      <p className="mt-2 text-[11px] text-muted-foreground">Más oscuro = más ocupado. Gris = fuera de horario.</p>
     </div>
   );
 }

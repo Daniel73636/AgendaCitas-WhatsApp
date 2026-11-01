@@ -74,6 +74,10 @@ describe('aislamiento: listados', () => {
     expect(s.json.totals.appointments).toBe(1);
     const sa = await call('GET', `/v1/reports/summary?from=${isoDate(-60)}&to=${isoDate(90)}`, a);
     expect(sa.json.totals.appointments).toBeGreaterThan(50);
+    const csv = await call('GET', `/v1/reports/export?from=${isoDate(-60)}&to=${isoDate(90)}`, b);
+    expect(csv.status).toBe(200);
+    expect(csv.json.csv).toContain('Pro Otro');
+    expect(csv.json.csv).not.toContain('Camila');
   });
 
   it('A tampoco ve nada de B', async () => {

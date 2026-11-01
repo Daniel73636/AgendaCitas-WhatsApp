@@ -3,7 +3,7 @@ import type { AppointmentDto, StaffDto } from '@agenda/contracts';
 import { cn } from '@agenda/ui';
 import { DndContext, type DragEndEvent, type DragStartEvent, MouseSensor, TouchSensor, useDraggable, useSensor, useSensors, type Modifier } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
@@ -170,6 +170,7 @@ export function CalendarGrid({ date, staff, appointments, schedules, timeOff, qu
             {staff.map((s) => (
               <div key={s.id} className="flex flex-1 items-center justify-center gap-2 border-l border-border px-2 py-2.5 text-sm font-semibold">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} /> {s.displayName.split(' ')[0]}
+                <button type="button" aria-label={`Nueva cita con ${s.displayName}`} title="Crear a las 10:00" className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => onCreate(s.id, isoAt(date, 10 * 60, tz))}><Plus size={14} /></button>
               </div>
             ))}
           </div>
@@ -227,7 +228,7 @@ export function CalendarGrid({ date, staff, appointments, schedules, timeOff, qu
           </div>
         </div>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">Tip: arrastra una cita para moverla (o cambiarla de profesional); en pantallas tactiles manten presionado. Clic en un hueco libre para crear una cita.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Tip: arrastra una cita para moverla (o cambiarla de profesional); en pantallas táctiles mantén presionado. Clic en un hueco libre, o el + del nombre, crea una cita.</p>
       {dragging && null}
     </DndContext>
   );

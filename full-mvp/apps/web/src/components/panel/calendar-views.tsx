@@ -35,7 +35,7 @@ export function AgendaList({ appointments, staff, date, onCreate }: { appointmen
         ))}
       </div>
       {list.length === 0 ? (
-        <EmptyState icon={<CalendarX2 />} title="Sin citas este dia" description={`${dateLabelFromStr(date)}. Desliza para cambiar de profesional.`} action={<Button size="sm" onClick={() => onCreate(active === 'all' ? undefined : active)}><Plus size={14} /> Crear cita</Button>} />
+        <EmptyState icon={<CalendarX2 />} title="Sin citas este día" description={`${dateLabelFromStr(date)}. Desliza para cambiar de profesional.`} action={<Button size="sm" onClick={() => onCreate(active === 'all' ? undefined : active)}><Plus size={14} /> Crear cita</Button>} />
       ) : (
         list.map((a) => <AppointmentRow key={a.id} apt={a} showStaff={active === 'all'} compact />)
       )}
@@ -45,7 +45,7 @@ export function AgendaList({ appointments, staff, date, onCreate }: { appointmen
 }
 
 /** Vista semana: 7 columnas con las citas del dia como fichas compactas. */
-export function WeekView({ date, appointments, onPickDay }: { date: string; appointments: AppointmentDto[]; onPickDay: (d: string) => void }) {
+export function WeekView({ date, appointments, onPickDay, onCreate }: { date: string; appointments: AppointmentDto[]; onPickDay: (d: string) => void; onCreate?: (d: string) => void }) {
   const { tz } = useAuthed();
   const monday = mondayOf(date);
   const today = todayIn(tz);
@@ -67,8 +67,13 @@ export function WeekView({ date, appointments, onPickDay }: { date: string; appo
                   <span className="block truncate text-muted-foreground">{a.items[0]?.name}</span>
                 </Link>
               ))}
-              {list.length > 8 && <button onClick={() => onPickDay(d)} className="text-left text-xs text-primary">+{list.length - 8} mas</button>}
-              {list.length === 0 && <p className="px-1 py-2 text-xs text-muted-foreground">—</p>}
+              {list.length > 8 && <button onClick={() => onPickDay(d)} className="text-left text-xs text-primary">+{list.length - 8} más</button>}
+              {list.length === 0 && <p className="px-1 py-2 text-xs text-muted-foreground">Sin citas</p>}
+              {onCreate && (
+                <button type="button" onClick={() => onCreate(d)} className="mt-1 inline-flex items-center gap-1 rounded-lg px-1 py-1 text-left text-xs font-medium text-primary hover:bg-secondary">
+                  <Plus size={12} /> Crear
+                </button>
+              )}
             </div>
           </div>
         );
@@ -88,7 +93,7 @@ export function MonthView({ date, appointments, onPickDay }: { date: string; app
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
       <div className="grid grid-cols-7 border-b border-border bg-muted text-center text-xs font-medium text-muted-foreground">
-        {['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'].map((d) => <div key={d} className="py-2">{d}</div>)}
+        {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => <div key={d} className="py-2">{d}</div>)}
       </div>
       <div className="grid grid-cols-7">
         {days.map((d) => {

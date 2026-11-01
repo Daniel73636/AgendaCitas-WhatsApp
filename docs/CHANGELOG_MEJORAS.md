@@ -2,6 +2,14 @@
 
 Rama: `feat/mejora-produccion-ux`.
 
+## Fase 3 — calendario, reportes y marca
+
+- En el día, el encabezado de cada profesional crea una cita a las 10:00 y el clic en un hueco sigue abriendo el formulario con esa hora. En la semana, cada día tiene «Crear».
+- `GET /v1/reports/export` devuelve un CSV (ocupación, inasistencias y servicios). El panel lo descarga en el rango elegido. El archivo de otro negocio no incluye nombres ajenos.
+- La página pública usa el logo, la portada y el color de marca del tenant (Ajustes). El manifiesto de instalación toma ese color.
+- Anticipo: interfaz `PaymentProvider`. `mock` solo con `DEMO_MODE`; `none` rechaza el cobro público; `wompi` no está implementado y la API no arranca si se pide.
+- Checklist: `docs/CHECKLIST_LANZAMIENTO.md`.
+
 ## Fase 2 — reserva pública, recordatorios y holds
 
 - La carga de horarios muestra error con **Reintentar**. El día vacío explica si no hay cupo ese día, con ese profesional o en las dos semanas, y ofrece la próxima fecha o la lista de espera.
@@ -27,4 +35,3 @@ Rama: `feat/mejora-produccion-ux`.
 - Sesión en cookie HttpOnly y CSRF.
 - RLS de PostgreSQL y clave de idempotencia con hash del cuerpo.
 - Pasarela real (Wompi), compilación de la API a `dist`, Redis para rate limit y SSE, Playwright y k6.
-- Creación rápida al tocar un hueco en la vista día del calendario.

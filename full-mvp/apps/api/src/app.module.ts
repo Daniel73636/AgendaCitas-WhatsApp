@@ -2,6 +2,7 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './common/auth';
 import { CONFIG, type AppConfig } from './common/config';
+import { MockPaymentProvider, NonePaymentProvider, PAYMENT_PROVIDER } from './modules/payments/payment-provider';
 import { AllExceptionsFilter } from './common/errors';
 import { CoreModule } from './core/core.module';
 import { AppointmentsController } from './modules/appointments/appointments.controller';
@@ -73,6 +74,11 @@ import { WebhooksController } from './modules/webhooks.controller';
     PrivacyService,
     ReportsService,
     JobsService,
+    {
+      provide: PAYMENT_PROVIDER,
+      inject: [CONFIG],
+      useFactory: (config: AppConfig) => (config.paymentsProvider === 'mock' ? new MockPaymentProvider() : new NonePaymentProvider()),
+    },
   ],
 })
 class DomainModule {}

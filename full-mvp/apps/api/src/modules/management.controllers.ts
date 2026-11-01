@@ -96,6 +96,7 @@ export class TenantController {
     return {
       id: ctx.tenant.id, slug: ctx.tenant.slug, name: ctx.tenant.name, description: ctx.tenant.description, phone: ctx.tenant.phone,
       currency: ctx.tenant.currency, address: ctx.location.address, timezone: ctx.tz, lat: ctx.location.lat, lng: ctx.location.lng,
+      logoUrl: ctx.tenant.logoUrl, coverUrl: ctx.tenant.coverUrl,
       settings: ctx.settings,
       whatsapp: { mode: this.messaging.mode, connected: this.messaging.mode === 'cloud', phoneNumberId: this.config.whatsappPhoneNumberId ?? null },
       otpMode: isMockOtp(this.config) ? ('mock' as const) : ('real' as const),
@@ -117,6 +118,8 @@ export class TenantController {
     if (body.name !== undefined) set.name = body.name;
     if (body.description !== undefined) set.description = body.description;
     if (body.phone !== undefined) set.phone = body.phone;
+    if (body.logoUrl !== undefined) set.logoUrl = body.logoUrl || null;
+    if (body.coverUrl !== undefined) set.coverUrl = body.coverUrl || null;
     if (body.settings) set.settings = tenantSettings.parse({ ...ctx.settings, ...body.settings }) as unknown as Record<string, unknown>;
     await this.handle.db.update(tenants).set(set).where(eq(tenants.id, a.tenantId));
     if (body.address !== undefined || body.timezone !== undefined) {
@@ -277,6 +280,8 @@ export class ReportsController {
   @Get('no-shows') noShows(@Auth() a: AuthContext, @Query(zod(rangeQ)) q: z.infer<typeof rangeQ>) { return this.reports.noShows(a.tenantId, q); }
   @Get('occupancy') occupancy(@Auth() a: AuthContext, @Query(zod(rangeQ)) q: z.infer<typeof rangeQ>) { return this.reports.occupancy(a.tenantId, q); }
   @Get('revenue') revenue(@Auth() a: AuthContext, @Query(zod(rangeQ)) q: z.infer<typeof rangeQ>) { return this.reports.revenue(a.tenantId, q); }
+  /** CSV de ocupación, inasistencias y servicios más vendidos del rango. */
+  @Get('export') exportCsv(@Auth() a: AuthContext, @Query(zod(rangeQ)) q: z.infer<typeof rangeQ>) { return this.reports.exportCsv(a.tenantId, q); }
 }
 
 // ---------------------------------------------------------------------------

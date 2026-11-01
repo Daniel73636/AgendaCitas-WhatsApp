@@ -54,6 +54,7 @@ import { MessagingService } from '../../core/messaging.service';
 import { type TenantContext, TenantContextService } from '../../core/tenant-context.service';
 import { AvailabilityService, toSlotDto } from '../availability/availability.service';
 import { OtpService } from '../otp/otp.service';
+import { PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment-provider';
 import { RemindersService } from '../reminders/reminders.service';
 import { WaitlistService } from '../waitlist/waitlist.service';
 import { type AptRow, BookingCoreService } from './booking-core.service';
@@ -77,6 +78,7 @@ export class AppointmentsService {
     @Inject(TenantContextService) private readonly tenants: TenantContextService,
     @Inject(EventsService) private readonly events: EventsService,
     @Inject(OtpService) private readonly otp: OtpService,
+    @Inject(PAYMENT_PROVIDER) private readonly payments: PaymentProvider,
   ) {}
 
   // =========================================================================
@@ -419,14 +421,17 @@ export class AppointmentsService {
     return this.publicDto(ctx, updated);
   }
 
-  /** Pasarela de pago SIMULADA: confirma el anticipo y pasa la cita de pending a confirmed. */
+  /** Anticipo. Solo el proveedor mock (DEMO_MODE) confirma sin cobrar; none rechaza. */
   async publicPay(token: string): Promise<PublicAppointmentDto> {
-    // Sin pasarela real, este endpoint confirmaria el anticipo sin cobrar: solo existe en DEMO_MODE.
-    if (!this.config.demoMode) throw new AppError('FORBIDDEN', 'El pago en línea aún no está habilitado. Coordina el pago del anticipo directamente con el negocio.');
+    if (this.payments.name !== 'mock') throw new AppError('FORBIDDEN', 'El pago en línea aún no está habilitado. Coordina el pago del anticipo directamente con el negocio.');
     const { apt: a0, ctx } = await this.aptFromToken(token);
     await this.releaseExpired(ctx.tenant.id);
     const apt = await this.loadApt(ctx.tenant.id, a0.id);
     if (apt.status !== 'pending') throw new AppError('INVALID_TRANSITION', apt.status === 'canceled' ? 'El tiempo para pagar venció.' : 'Esta cita no requiere pago.');
+    const intent = await this.payments.createDeposit({ appointmentId: apt.id, amountCents: apt.depositRequiredCents, currency: ctx.tenant.currency });
+    if (intent.status !== 'simulated' || intent.amountCents < apt.depositRequiredCents) {
+      throw new AppError('FORBIDDEN', 'El pago en línea aún no está habilitado. Coordina el pago del anticipo directamente con el negocio.');
+    }
     const updated = await this.payDeposit(ctx, apt);
     return this.publicDto(ctx, updated);
   }

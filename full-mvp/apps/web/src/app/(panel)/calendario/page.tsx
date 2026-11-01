@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { CalendarGrid, type TimeOffLite, type WorkBlockLite } from '@/components/panel/calendar-grid';
 import { AgendaList, MonthView, WeekView } from '@/components/panel/calendar-views';
 import { NewAppointmentDialog, type NewAppointmentInitial } from '@/components/panel/new-appointment-dialog';
-import { dateLabelFromStr, dayEndIso, dayStartIso, mondayOf, monthLabel, todayIn } from '@/lib/format';
+import { dateLabelFromStr, dayEndIso, dayStartIso, isoAt, mondayOf, monthLabel, todayIn } from '@/lib/format';
 import { useAuthed, usePQuery } from '@/lib/panel';
 import { useCalendarUi } from '@/lib/session';
 
@@ -48,7 +48,7 @@ export default function CalendarPage() {
         <h1 className="mr-auto text-2xl font-bold">Calendario</h1>
         <div className="flex rounded-xl bg-muted p-1 text-sm">
           {(['day', 'week', 'month'] as const).map((v) => (
-            <button key={v} onClick={() => setView(v)} className={cn('rounded-lg px-3 py-1.5 font-medium', view === v && 'bg-card shadow-sm')}>{v === 'day' ? 'Dia' : v === 'week' ? 'Semana' : 'Mes'}</button>
+            <button key={v} onClick={() => setView(v)} className={cn('rounded-lg px-3 py-1.5 font-medium', view === v && 'bg-card shadow-sm')}>{v === 'day' ? 'Día' : v === 'week' ? 'Semana' : 'Mes'}</button>
           ))}
         </div>
         <Select aria-label="Filtrar por profesional" className="w-44" value={staffFilter} onChange={(e) => setStaffFilter(e.target.value)}>
@@ -88,7 +88,14 @@ export default function CalendarPage() {
               <div className="md:hidden"><AgendaList appointments={apts} staff={staff} date={d} onCreate={(staffId) => open(staffId ? { staffId } : {})} /></div>
             </>
           )}
-          {view === 'week' && <WeekView date={d} appointments={apts} onPickDay={(day) => { setDate(day); setView('day'); }} />}
+          {view === 'week' && (
+            <WeekView
+              date={d}
+              appointments={apts}
+              onPickDay={(day) => { setDate(day); setView('day'); }}
+              onCreate={(day) => open({ startsAt: isoAt(day, 10 * 60, tz) })}
+            />
+          )}
           {view === 'month' && <MonthView date={d} appointments={apts} onPickDay={(day) => { setDate(day); setView('day'); }} />}
         </>
       )}
