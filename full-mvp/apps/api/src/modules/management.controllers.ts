@@ -17,7 +17,8 @@ import {
   timeOffInput,
   tenantSettings,
 } from '@agenda/contracts';
-import { type DbHandle, and, appointments, count, eq, locations, staffSchedules, services, tenants, users, verifyPassword } from '@agenda/db';
+import { type DbHandle, and, appointments, count, eq, locations, staffSchedules, services, tenants, users } from '@agenda/db';
+import { AuthService } from './auth/auth.service';
 import { z } from 'zod';
 import { Auth, type AuthContext, OwnerOnly, Public } from '../common/auth';
 import { CONFIG, type AppConfig, isMockOtp } from '../common/config';
@@ -50,16 +51,14 @@ export class AuthController {
   constructor(
     @Inject(DB_HANDLE) private readonly handle: DbHandle,
     @Inject(CONFIG) private readonly config: AppConfig,
-    @Inject(TenantContextService) private readonly tenants: TenantContextService,
+    @Inject(AuthService) private readonly auth: AuthService,
   ) {}
 
-  private async session(userId: string, tenantId: string, role: 'owner' | 'staff', name: string, email: string): Promise<AuthSession> {
-    const ctx = await this.tenants.byId(tenantId);
-    return {
-      token: signToken({ sub: userId, tid: tenantId, role }, this.config.authSecret, 12 * 3600),
-      user: { id: userId, name, email, role },
-      tenant: { id: tenantId, slug: ctx.tenant.slug, name: ctx.tenant.name, timezone: ctx.tz, currency: ctx.tenant.currency },
-    };
+  /** Configuracion publica para la pantalla de login (p. ej. mostrar la cuenta demo solo en DEMO_MODE). */
+  @Public()
+  @Get('config')
+  authConfig() {
+    return { demoMode: this.config.demoMode };
   }
 
   @Public()
@@ -67,17 +66,15 @@ export class AuthController {
   @RateLimit(10, 60)
   @Post('login')
   @HttpCode(200)
-  async login(@Body(zod(loginInput)) body: { email: string; password: string }): Promise<AuthSession> {
-    const [u] = await this.handle.db.select().from(users).where(eq(users.email, body.email.toLowerCase())).limit(1);
-    if (!u || !verifyPassword(body.password, u.passwordHash)) throw new AppError('UNAUTHORIZED', 'Correo o contrasena incorrectos.');
-    return this.session(u.id, u.tenantId, u.role as 'owner' | 'staff', u.name, u.email);
+  login(@Body(zod(loginInput)) body: { email: string; password: string }): Promise<AuthSession> {
+    return this.auth.login(body.email, body.password);
   }
 
   @Get('me')
   async me(@Auth() a: AuthContext): Promise<AuthSession> {
-    const [u] = await this.handle.db.select().from(users).where(eq(users.id, a.userId)).limit(1);
+    const [u] = await this.handle.db.select().from(users).where(and(eq(users.id, a.userId), eq(users.tenantId, a.tenantId))).limit(1);
     if (!u) throw new AppError('UNAUTHORIZED', 'Usuario no encontrado.');
-    return this.session(u.id, u.tenantId, u.role as 'owner' | 'staff', u.name, u.email);
+    return this.auth.session(u.id, u.tenantId, u.role as 'owner' | 'staff', u.name, u.email);
   }
 }
 
@@ -236,6 +233,7 @@ export class MessagesController {
   constructor(
     @Inject(MessagingService) private readonly messaging: MessagingService,
     @Inject(DB_HANDLE) private readonly handle: DbHandle,
+    @Inject(CONFIG) private readonly config: AppConfig,
   ) {}
   @Get() conversations(@Auth() a: AuthContext) { return this.messaging.conversations(a.tenantId); }
   @Get('thread') thread(@Auth() a: AuthContext, @Query('phone') phone: string) { return this.messaging.thread(a.tenantId, phone.replace(/\s/g, '').replace(/^(?!\+)/, '+')); }
@@ -244,7 +242,7 @@ export class MessagesController {
   }
   /** Solo demo/mock: simula un mensaje entrante del cliente (o un clic de boton). */
   @Post('simulate-inbound') @HttpCode(200) async simulate(@Auth() a: AuthContext, @Body(zod(simulateInboundInput)) b: ReturnType<typeof simulateInboundInput.parse>) {
-    if (this.messaging.mode !== 'mock') throw new AppError('FORBIDDEN', 'Solo disponible en modo mock.');
+    if (this.messaging.mode !== 'mock' || !this.config.demoMode) throw new AppError('FORBIDDEN', 'Solo disponible en modo demostración.');
     return this.messaging.recordInbound({ tenantId: a.tenantId, phone: b.phone, body: b.body });
   }
 }

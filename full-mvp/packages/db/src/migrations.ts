@@ -282,4 +282,34 @@ CREATE TABLE idempotency_keys (
 );
 `,
   },
+  {
+    name: '0002_seguridad_privacidad',
+    sql: /* sql */ `
+-- Bloqueo de login por correo (existan o no las cuentas)
+CREATE TABLE login_attempts (
+  email text PRIMARY KEY,
+  failed_count integer NOT NULL DEFAULT 0,
+  locked_until timestamptz,
+  last_attempt_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Ley 1581: registro del consentimiento de tratamiento de datos
+ALTER TABLE customers ADD COLUMN privacy_accepted_at timestamptz;
+ALTER TABLE customers ADD COLUMN privacy_policy_version text;
+
+-- Bitacora de acciones sensibles (sin datos personales)
+CREATE TABLE audit_log (
+  id uuid PRIMARY KEY,
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  user_id uuid,
+  action text NOT NULL,
+  entity text NOT NULL,
+  entity_id text,
+  correlation_id text,
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX audit_log_tenant_idx ON audit_log (tenant_id, created_at);
+`,
+  },
 ];

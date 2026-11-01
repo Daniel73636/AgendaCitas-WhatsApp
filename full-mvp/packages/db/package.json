@@ -19,6 +19,7 @@
     "@agenda/domain-booking": "workspace:*",
     "@agenda/whatsapp": "workspace:*",
     "@electric-sql/pglite": "^0.3.0",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.44.0",
     "pg": "^8.13.1"

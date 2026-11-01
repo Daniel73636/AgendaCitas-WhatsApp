@@ -15,6 +15,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+
+  useEffect(() => {
+    api<{ demoMode: boolean }>('/v1/auth/config').then((c) => setDemoMode(c.demoMode)).catch(() => setDemoMode(false));
+  }, []);
 
   useEffect(() => {
     if (hydrated && session) router.replace('/hoy');
@@ -40,22 +45,24 @@ export default function LoginPage() {
       <div className="flex flex-col items-center gap-2 text-center">
         <div className="rounded-2xl bg-primary p-3 text-primary-foreground"><CalendarCheck /></div>
         <h1 className="text-2xl font-bold">Panel del negocio</h1>
-        <p className="text-sm text-muted-foreground">Inicia sesion para ver tu agenda.</p>
+        <p className="text-sm text-muted-foreground">Inicia sesión para ver tu agenda.</p>
       </div>
       <Card className="p-5">
         <form onSubmit={submit} className="flex flex-col gap-4">
           <Field label="Correo">
             <Input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@negocio.com" />
           </Field>
-          <Field label="Contrasena" error={error}>
+          <Field label="Contraseña" error={error}>
             <Input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <Button type="submit" loading={loading}>Entrar</Button>
         </form>
       </Card>
+      {demoMode && (
       <Button variant="outline" onClick={() => submit(undefined, { email: 'admin@belleza-demo.com', password: 'demo1234' })} disabled={loading}>
         Entrar con la cuenta demo
       </Button>
+      )}
     </main>
   );
 }
