@@ -14,6 +14,18 @@ import { toast } from '@/lib/session';
 
 type Detail = AppointmentDto & { token: string };
 
+const TEMPLATE_ES: Record<string, string> = {
+  appointment_confirmation: 'Confirmación',
+  appointment_reminder_24h: 'Recordatorio 24 h',
+  appointment_reminder_6h: 'Recordatorio 6 h',
+  appointment_reminder_2h: 'Recordatorio 2 h',
+  appointment_rescheduled: 'Reprogramación',
+  appointment_canceled: 'Cancelación',
+  waitlist_offer: 'Oferta de lista de espera',
+  review_request: 'Pedido de reseña',
+  otp_code: 'Código de verificación',
+};
+
 export default function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { tz, currency, slug, token } = useAuthed();
@@ -24,6 +36,12 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
   const [canceling, setCanceling] = useState(false);
   const [moving, setMoving] = useState(false);
   const [notes, setNotes] = useState('');
+  const [demoMode, setDemoMode] = useState(false);
+  useEffect(() => {
+    let cancel = false;
+    api<{ demoMode: boolean }>('/v1/auth/config').then((c) => { if (!cancel) setDemoMode(!!c.demoMode); }).catch(() => { if (!cancel) setDemoMode(false); });
+    return () => { cancel = true; };
+  }, []);
   const apt = q.data;
   useEffect(() => { if (apt) setNotes(apt.notes ?? ''); }, [apt?.id, apt?.version]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -44,14 +62,14 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
           <h1 className="text-2xl font-bold">{fmtTime(apt.startsAt, tz)} – {fmtTime(apt.endsAt, tz)}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={apt.status} />
-            {apt.confirmedByCustomer && <Badge tone="success"><CheckCircle2 size={12} /> Confirmo asistencia</Badge>}
+            {apt.confirmedByCustomer && <Badge tone="success"><CheckCircle2 size={12} /> Confirmó asistencia</Badge>}
             <Badge>{apt.source}</Badge>
             <span className="text-xs text-muted-foreground">v{apt.version}</span>
           </div>
         </div>
         {active && (
           <div className="flex flex-wrap gap-2">
-            {canTransition(apt.status, 'in_progress') && <Button variant="outline" loading={m.checkIn.isPending} onClick={() => m.checkIn.mutate(apt)}><LogIn size={16} /> Llego</Button>}
+            {canTransition(apt.status, 'in_progress') && <Button variant="outline" loading={m.checkIn.isPending} onClick={() => m.checkIn.mutate(apt)}><LogIn size={16} /> Llegó</Button>}
             {canTransition(apt.status, 'completed') && <Button onClick={() => setCompleting(true)}><CheckCircle2 size={16} /> Completar y cobrar</Button>}
           </div>
         )}
@@ -93,15 +111,17 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setMoving(true)}><CalendarClock size={16} /> Reprogramar</Button>
             {apt.status === 'pending' && <PayDepositButton apt={apt} />}
-            {canTransition(apt.status, 'no_show') && apt.status !== 'in_progress' && <Button variant="outline" loading={m.noShow.isPending} onClick={() => m.noShow.mutate(apt)}><UserX size={16} /> No asistio</Button>}
+            {canTransition(apt.status, 'no_show') && apt.status !== 'in_progress' && <Button variant="outline" loading={m.noShow.isPending} onClick={() => m.noShow.mutate(apt)}><UserX size={16} /> No asistió</Button>}
             <Button variant="outline" onClick={() => { void navigator.clipboard.writeText(link); toast.success('Enlace de la cita copiado'); }}><Copy size={16} /> Copiar enlace del cliente</Button>
             <Button variant="ghost" className="ml-auto text-destructive" onClick={() => setCanceling(true)}><XCircle size={16} /> Cancelar</Button>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Demo WhatsApp (modo mock):</span> simular que el cliente toca
-            <Button size="sm" variant="outline" loading={simulate.isPending} onClick={() => simulate.mutate('confirm')}>“Confirmo”</Button>
-            <Button size="sm" variant="outline" onClick={() => simulate.mutate('cancel')}>“Cancelar”</Button>
-          </div>
+          {demoMode && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Demo WhatsApp:</span> simular que el cliente toca
+              <Button size="sm" variant="outline" loading={simulate.isPending} onClick={() => simulate.mutate('confirm')}>“Confirmo”</Button>
+              <Button size="sm" variant="outline" onClick={() => simulate.mutate('cancel')}>“Cancelar”</Button>
+            </div>
+          )}
         </Card>
       )}
 
@@ -114,13 +134,22 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
       </Card>
 
       <Card>
+        <CardHeader><CardTitle>Recordatorios</CardTitle></CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          {apt.customerId
+            ? 'Si el cliente autorizó WhatsApp, se envía la confirmación al reservar y los avisos activos del negocio (por defecto, 24 horas y 2 horas antes). Reprogramar reemplaza los pendientes; cancelar los detiene.'
+            : 'Esta reserva todavía no tiene cliente, así que no hay recordatorios que enviar.'}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle>Historial de mensajes</CardTitle></CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {msgs.data?.length === 0 && <p className="text-sm text-muted-foreground">Aun no se han enviado mensajes por esta cita.</p>}
+          {msgs.data?.length === 0 && <p className="text-sm text-muted-foreground">Aún no se han enviado mensajes por esta cita.</p>}
           {msgs.data?.map((mm) => (
             <div key={mm.id} className="rounded-xl border border-border p-3 text-sm">
               <div className="mb-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">{mm.direction === 'out' ? '➡️ Enviado' : '⬅️ Recibido'}{mm.template && <Badge tone="primary">{mm.template}</Badge>}</span>
+                <span className="flex items-center gap-1.5">{mm.direction === 'out' ? '➡️ Enviado' : '⬅️ Recibido'}{mm.template && <Badge tone="primary">{TEMPLATE_ES[mm.template] ?? mm.template}</Badge>}</span>
                 <span>{fmtDateTime(mm.createdAt, tz)} · <Badge tone={mm.status === 'failed' ? 'danger' : 'success'}>{mm.status}</Badge></span>
               </div>
               <p className="whitespace-pre-wrap">{mm.body}</p>

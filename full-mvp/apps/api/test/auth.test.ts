@@ -195,6 +195,7 @@ describe('sin DEMO_MODE: nada de codigos ni simuladores de demostracion', () => 
     expect(cfg.json).toEqual({ demoMode: false });
     const biz = await t.call('GET', `/v1/public/${SLUG}`);
     expect(biz.json.otpMode).toBe('real');
+    expect(biz.json.demoMode).toBe(false);
     void isoDate;
   });
 });

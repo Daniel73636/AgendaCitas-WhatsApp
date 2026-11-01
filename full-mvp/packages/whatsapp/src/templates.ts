@@ -51,12 +51,12 @@ export const TEMPLATES: Record<TemplateName, TemplateDef> = {
   appointment_confirmation: {
     category: 'utility',
     params: ['name', 'service', 'date', 'time', 'staff', 'business', 'link'],
-    body: 'Hola {{name}}, tu cita de *{{service}}* en {{business}} quedo confirmada para el {{date}} a las {{time}} con {{staff}}. Puedes ver, reprogramar o cancelar aqui: {{link}}',
+    body: 'Hola {{name}}, tu cita de *{{service}}* en {{business}} quedó confirmada para el {{date}} a las {{time}} con {{staff}}. Puedes ver, reprogramar o cancelar aquí: {{link}}',
   },
   appointment_reminder_24h: {
     category: 'utility',
     params: ['name', 'service', 'date', 'time', 'business'],
-    body: 'Hola {{name}}, te recordamos tu cita de *{{service}}* manana {{date}} a las {{time}} en {{business}}. ¿Confirmas tu asistencia?',
+    body: 'Hola {{name}}, te recordamos tu cita de *{{service}}* mañana {{date}} a las {{time}} en {{business}}. ¿Confirmas tu asistencia?',
     buttons: [
       { id: 'confirm', label: 'Confirmo' },
       { id: 'reschedule', label: 'Reprogramar' },
@@ -75,7 +75,7 @@ export const TEMPLATES: Record<TemplateName, TemplateDef> = {
   appointment_reminder_2h: {
     category: 'utility',
     params: ['name', 'service', 'time', 'address'],
-    body: 'Hola {{name}}, en 2 horas (a las {{time}}) es tu cita de *{{service}}*. Direccion: {{address}}.',
+    body: 'Hola {{name}}, en 2 horas (a las {{time}}) es tu cita de *{{service}}*. Dirección: {{address}}.',
   },
   appointment_rescheduled: {
     category: 'utility',
@@ -90,28 +90,28 @@ export const TEMPLATES: Record<TemplateName, TemplateDef> = {
   waitlist_offer: {
     category: 'utility',
     params: ['name', 'service', 'date', 'time', 'offerMinutes', 'link'],
-    body: 'Hola {{name}}, se libero un cupo para *{{service}}* el {{date}} a las {{time}}. Lo reservamos para ti por {{offerMinutes}} minutos: {{link}}',
+    body: 'Hola {{name}}, se liberó un cupo para *{{service}}* el {{date}} a las {{time}}. Lo reservamos para ti por {{offerMinutes}} minutos: {{link}}',
     buttons: [{ id: 'accept', label: 'Lo quiero' }],
   },
   review_request: {
     category: 'utility',
     params: ['name', 'business', 'reviewUrl'],
-    body: 'Gracias por visitarnos, {{name}}. ¿Como te fue en {{business}}? Cuentanos tu experiencia: {{reviewUrl}}',
+    body: 'Gracias por visitarnos, {{name}}. ¿Cómo te fue en {{business}}? Cuéntanos tu experiencia: {{reviewUrl}}',
   },
   otp_code: {
     category: 'authentication',
     params: ['code'],
-    body: 'Tu codigo de verificacion es {{code}}. No lo compartas con nadie. Vence en 10 minutos.',
+    body: 'Tu código de verificación es {{code}}. No lo compartas con nadie. Vence en 10 minutos.',
   },
   birthday_offer: {
     category: 'marketing',
     params: ['name', 'business', 'link'],
-    body: '¡Feliz cumpleanos, {{name}}! En {{business}} tienes un regalo para ti. Reserva aqui: {{link}}',
+    body: '¡Feliz cumpleaños, {{name}}! En {{business}} tienes un regalo para ti. Reserva aquí: {{link}}',
   },
   winback: {
     category: 'marketing',
     params: ['name', 'business', 'link'],
-    body: 'Hola {{name}}, te extranamos en {{business}}. Agenda tu proxima cita cuando quieras: {{link}}',
+    body: 'Hola {{name}}, te extrañamos en {{business}}. Agenda tu próxima cita cuando quieras: {{link}}',
   },
 };
 

@@ -47,7 +47,7 @@ export default function TodayPage() {
             <Stat label="Citas de hoy" value={apts.length} hint={`${done.length} terminadas · ${upcoming.length} por atender`} />
             <Stat label="Confirmadas por el cliente" value={`${confirmedCount}/${upcoming.length + done.filter((d) => d.status === 'completed').length || 0}`} hint="Respondieron al recordatorio" tone={(unconfirmed.data?.length ?? 0) > 0 ? 'warning' : 'default'} />
             <Stat label="Ingresos del dia" value={money(collected, currency)} hint={`Esperado: ${money(expected, currency)}`} />
-            <Stat label="Proxima cita" value={next ? fmtTime(next.startsAt, tz) : '—'} hint={next ? `${next.customerName ?? ''} · ${next.staffName.split(' ')[0]}` : 'Sin citas pendientes'} />
+            <Stat label="Próxima cita" value={next ? fmtTime(next.startsAt, tz) : '—'} hint={next ? `${next.customerName ?? ''} · ${next.staffName.split(' ')[0]}` : 'Sin citas pendientes'} />
           </>
         )}
       </div>
@@ -103,7 +103,7 @@ function UnconfirmedAlert({ apt }: { apt: AppointmentDto }) {
         </div>
       </div>
       <div className="mt-2 flex gap-2">
-        {apt.status === 'pending' ? <PayDepositButton apt={apt} /> : <Button size="sm" variant="outline" loading={remind.isPending} onClick={() => remind.mutate()}>Pedir confirmacion</Button>}
+        {apt.status === 'pending' ? <PayDepositButton apt={apt} /> : <Button size="sm" variant="outline" loading={remind.isPending} onClick={() => remind.mutate()}>Pedir confirmación</Button>}
         <Link href={`/citas/${apt.id}`} className="inline-flex h-8 items-center rounded-xl px-3 text-xs font-medium hover:bg-muted">Ver</Link>
       </div>
     </Card>

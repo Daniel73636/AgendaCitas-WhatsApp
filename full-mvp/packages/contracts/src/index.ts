@@ -189,6 +189,14 @@ export const timeOffInput = z
 // ---------------------------------------------------------------------------
 // Publico
 // ---------------------------------------------------------------------------
+/** Recordatorios que el negocio tiene activos (para explicárselos a quien reserva). */
+export interface PublicReminderFlags {
+  confirm: boolean;
+  r24: boolean;
+  r6: boolean;
+  r2: boolean;
+}
+
 export interface PublicBusiness {
   tenant: {
     slug: string;
@@ -205,8 +213,12 @@ export interface PublicBusiness {
   };
   services: ServiceDto[];
   staff: StaffDto[];
-  settings: Pick<TenantSettings, 'holdMinutes' | 'cancelMinHours' | 'rescheduleMinHours' | 'maxAdvanceDays'>;
+  settings: Pick<TenantSettings, 'holdMinutes' | 'cancelMinHours' | 'rescheduleMinHours' | 'maxAdvanceDays'> & {
+    reminders: PublicReminderFlags;
+  };
   otpMode: 'mock' | 'real';
+  /** Pago simulado y copys de demostración solo cuando el servidor está en DEMO_MODE. */
+  demoMode: boolean;
 }
 
 export const availabilityQuery = z.object({

@@ -38,7 +38,7 @@ beforeAll(async () => {
   clock = t.app.get(ClockService);
   const biz = await t.call('GET', `/v1/public/${SLUG}`);
   svcCorte = biz.json.services.find((s: any) => s.name.startsWith('Corte de cabello'));
-  svcColor = biz.json.services.find((s: any) => s.name.startsWith('Coloracion'));
+  svcColor = biz.json.services.find((s: any) => s.name.startsWith('Coloraci'));
   staffCamila = biz.json.staff.find((s: any) => s.displayName.startsWith('Camila'));
 });
 
@@ -338,6 +338,80 @@ describe('lista de espera', () => {
     const token = (await t.call('GET', `/v1/appointments/${offered!.id}`, { token: admin })).json.token;
     const accept = await t.call('POST', `/v1/public/appointments/${token}/accept`, { body: {} });
     expect(accept.json.status).toBe('confirmed');
+  });
+});
+
+describe('barrido de holds vencidos', () => {
+  async function tick(secret?: string) {
+    return t.call('POST', '/v1/internal/jobs/tick', {
+      ...(secret !== undefined ? { headers: { 'x-internal-secret': secret } } : {}),
+    });
+  }
+
+  it('rechaza el tick sin el secreto interno y no toca un hold vigente', async () => {
+    const list = await slots([svcCorte.id], staffCamila.id, 51, 53);
+    const hold = await t.call('POST', `/v1/public/${SLUG}/holds`, { body: { serviceIds: [svcCorte.id], staffId: staffCamila.id, startsAt: list[0]!.start } });
+    expect(hold.status).toBe(201);
+    expect((await tick()).status).toBe(403);
+    expect((await tick('secreto-incorrecto')).status).toBe(403);
+    const swept = await tick(t.config.internalSecret);
+    expect(swept.status).toBe(200);
+    const [row] = await handle.db.select().from(appointments).where(eq(appointments.id, hold.json.holdId));
+    expect(row!.status).toBe('held');
+    expect(swept.json.holdsReleased).toBe(0);
+  });
+
+  it('el tick cancela el hold vencido, suelta la restriccion EXCLUDE y no repite el barrido', async () => {
+    const list = await slots([svcCorte.id], staffCamila.id, 54, 56);
+    const start = list[1]!.start;
+    const hold = await t.call('POST', `/v1/public/${SLUG}/holds`, { body: { serviceIds: [svcCorte.id], staffId: staffCamila.id, startsAt: start } });
+    expect(hold.status).toBe(201);
+    const during = await slots([svcCorte.id], staffCamila.id, 54, 56);
+    expect(during.find((s) => s.start === start)).toBeUndefined();
+
+    clock.advance(6 * 60_000);
+    try {
+      const swept = await tick(t.config.internalSecret);
+      expect(swept.status).toBe(200);
+      expect(swept.json.holdsReleased).toBeGreaterThanOrEqual(1);
+      const [row] = await handle.db.select().from(appointments).where(eq(appointments.id, hold.json.holdId));
+      expect(row!.status).toBe('canceled');
+      expect(row!.cancelReason).toBe('hold_expired');
+
+      const again = await tick(t.config.internalSecret);
+      expect(again.json.holdsReleased).toBe(0);
+
+      const reclaimed = await t.call('POST', `/v1/public/${SLUG}/holds`, { body: { serviceIds: [svcCorte.id], staffId: staffCamila.id, startsAt: start } });
+      expect(reclaimed.status).toBe(201);
+      const [fresh] = await handle.db.select().from(appointments).where(eq(appointments.id, reclaimed.json.holdId));
+      expect(fresh!.status).toBe('held');
+    } finally {
+      clock.set(null);
+    }
+  });
+
+  it('un anticipo vencido se libera; una cita confirmada no', async () => {
+    const corte = await slots([svcCorte.id], staffCamila.id, 57, 58);
+    const color = await slots([svcColor.id], 'any', 59, 59);
+    const confirmed = await bookFlow(corte[0]!.start, [svcCorte.id], staffCamila.id);
+    expect(confirmed.book.status).toBe(201);
+    expect(confirmed.book.json.status).toBe('confirmed');
+    const pending = await bookFlow(color[0]!.start, [svcColor.id]);
+    expect(pending.book.json.status).toBe('pending');
+
+    clock.advance(31 * 60_000);
+    try {
+      const swept = await tick(t.config.internalSecret);
+      expect(swept.status).toBe(200);
+      expect(swept.json.holdsReleased).toBeGreaterThanOrEqual(1);
+      const [kept] = await handle.db.select().from(appointments).where(eq(appointments.id, confirmed.book.json.id));
+      const [dropped] = await handle.db.select().from(appointments).where(eq(appointments.id, pending.book.json.id));
+      expect(kept!.status).toBe('confirmed');
+      expect(dropped!.status).toBe('canceled');
+      expect(dropped!.cancelReason).toBe('hold_expired');
+    } finally {
+      clock.set(null);
+    }
   });
 });
 

@@ -84,9 +84,9 @@ export async function seedDemo(db: Db, opts: SeedOptions = {}): Promise<{ tenant
 
   // --- Equipo --------------------------------------------------------------------
   const staffRows = [
-    { key: 'camila', displayName: 'Camila Rojas', bio: 'Estilista senior con 10 anos de experiencia en corte y color.', specialties: ['Corte', 'Color', 'Peinados'], color: '#db2777', priority: 3, commissionPct: 40 },
-    { key: 'andres', displayName: 'Andres Pardo', bio: 'Barbero y estilista. Especialista en cortes masculinos y barba.', specialties: ['Barberia', 'Corte', 'Barba'], color: '#2563eb', priority: 2, commissionPct: 35 },
-    { key: 'valentina', displayName: 'Valentina Cruz', bio: 'Manicurista y terapeuta de masajes relajantes.', specialties: ['Unas', 'Masajes'], color: '#059669', priority: 1, commissionPct: 35 },
+    { key: 'camila', displayName: 'Camila Rojas', bio: 'Estilista senior con 10 años de experiencia en corte y color.', specialties: ['Corte', 'Color', 'Peinados'], color: '#db2777', priority: 3, commissionPct: 40 },
+    { key: 'andres', displayName: 'Andrés Pardo', bio: 'Barbero y estilista. Especialista en cortes masculinos y barba.', specialties: ['Barbería', 'Corte', 'Barba'], color: '#2563eb', priority: 2, commissionPct: 35 },
+    { key: 'valentina', displayName: 'Valentina Cruz', bio: 'Manicurista y terapeuta de masajes relajantes.', specialties: ['Uñas', 'Masajes'], color: '#059669', priority: 1, commissionPct: 35 },
   ].map((s) => ({ ...s, id: uuidv7() }));
   await db.insert(t.staff).values(
     staffRows.map((s) => ({
@@ -98,10 +98,10 @@ export async function seedDemo(db: Db, opts: SeedOptions = {}): Promise<{ tenant
 
   // --- Servicios ------------------------------------------------------------------
   const svcRows = [
-    { key: 'corte', name: 'Corte de cabello', description: 'Lavado, corte y secado con asesoria de imagen.', category: 'Cabello', durationMin: 45, before: 0, after: 5, price: peso(55000), deposit: 0 },
-    { key: 'barba', name: 'Corte y barba', description: 'Corte clasico o moderno con perfilado de barba y toalla caliente.', category: 'Barberia', durationMin: 40, before: 0, after: 5, price: peso(38000), deposit: 0 },
-    { key: 'manicure', name: 'Manicure semipermanente', description: 'Limpieza, forma, esmaltado semipermanente y masaje de manos.', category: 'Unas', durationMin: 60, before: 0, after: 0, price: peso(45000), deposit: 0 },
-    { key: 'color', name: 'Coloracion completa', description: 'Diagnostico, tinte o mechas, tratamiento y peinado final.', category: 'Cabello', durationMin: 150, before: 0, after: 10, price: peso(220000), deposit: peso(60000) },
+    { key: 'corte', name: 'Corte de cabello', description: 'Lavado, corte y secado con asesoría de imagen.', category: 'Cabello', durationMin: 45, before: 0, after: 5, price: peso(55000), deposit: 0 },
+    { key: 'barba', name: 'Corte y barba', description: 'Corte clásico o moderno con perfilado de barba y toalla caliente.', category: 'Barbería', durationMin: 40, before: 0, after: 5, price: peso(38000), deposit: 0 },
+    { key: 'manicure', name: 'Manicure semipermanente', description: 'Limpieza, forma, esmaltado semipermanente y masaje de manos.', category: 'Uñas', durationMin: 60, before: 0, after: 0, price: peso(45000), deposit: 0 },
+    { key: 'color', name: 'Coloración completa', description: 'Diagnóstico, tinte o mechas, tratamiento y peinado final.', category: 'Cabello', durationMin: 150, before: 0, after: 10, price: peso(220000), deposit: peso(60000) },
     { key: 'masaje', name: 'Masaje relajante', description: 'Masaje de espalda y cuello con aceites esenciales (60 min).', category: 'Bienestar', durationMin: 60, before: 5, after: 10, price: peso(90000), deposit: 0 },
   ].map((s) => ({ ...s, id: uuidv7() }));
   await db.insert(t.services).values(

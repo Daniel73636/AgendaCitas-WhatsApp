@@ -37,7 +37,7 @@ export const STATUS_LABELS_ES: Record<AppointmentStatus, string> = {
   confirmed: 'Confirmada',
   in_progress: 'En curso',
   completed: 'Completada',
-  no_show: 'No asistio',
+  no_show: 'No asistió',
   canceled: 'Cancelada',
 };
 

@@ -70,7 +70,7 @@ export class AvailabilityService {
       .from(services)
       .where(and(eq(services.tenantId, tenantId), inArray(services.id, unique), eq(services.active, true), isNull(services.deletedAt)));
     const filtered = publicOnly ? rows.filter((r) => r.visiblePublic) : rows;
-    if (filtered.length !== unique.length) throw new AppError('NOT_FOUND', 'Alguno de los servicios ya no esta disponible.');
+    if (filtered.length !== unique.length) throw new AppError('NOT_FOUND', 'Alguno de los servicios ya no está disponible.');
     const byId = new Map(filtered.map((r) => [r.id, r]));
     return unique.map((id) => byId.get(id)!);
   }

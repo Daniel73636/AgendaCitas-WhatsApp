@@ -10,6 +10,6 @@ export async function getBusiness(slug: string): Promise<PublicBusiness | null> 
     return (await res.json()) as PublicBusiness;
   } catch (e) {
     if ((e as Error).message?.startsWith('API ')) throw e;
-    throw new Error('No se pudo conectar con la API. ¿Esta corriendo en el puerto 4100?');
+    throw new Error('No se pudo conectar con la API. ¿Está corriendo en el puerto 4100?');
   }
 }
