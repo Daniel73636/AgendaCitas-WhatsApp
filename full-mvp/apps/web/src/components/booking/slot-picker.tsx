@@ -1,7 +1,7 @@
 'use client';
 import type { AvailabilityResponse, SlotDto } from '@agenda/contracts';
 import { addDaysStr, dayPartOf } from '@agenda/domain-booking';
-import { Skeleton, cn } from '@agenda/ui';
+import { Button, Skeleton, cn } from '@agenda/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarX2, ChevronLeft, ChevronRight, Moon, Sun, Sunset } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { dateLabelFromStr, dayNumber, todayIn, weekdayShort } from '@/lib/format';
 
 const PARTS = [
-  { key: 'morning', label: 'Manana', icon: Sun },
+  { key: 'morning', label: 'Mañana', icon: Sun },
   { key: 'afternoon', label: 'Tarde', icon: Sunset },
   { key: 'evening', label: 'Noche', icon: Moon },
 ] as const;
@@ -23,15 +23,17 @@ export interface SlotPickerProps {
   tz: string;
   selected: string | null | undefined; // ISO de inicio
   onSelect: (slot: SlotDto) => void;
-  /** Se muestra cuando el dia elegido no tiene cupo (p.ej. boton de lista de espera). */
+  /** Se muestra cuando el día elegido no tiene cupo (p. ej. botón de lista de espera). */
   emptyAction?: ((date: string) => React.ReactNode) | undefined;
+  /** Profesional concreto, para explicar el estado vacío. */
+  emptyStaffName?: string | undefined;
   initialDate?: string | undefined;
   staffNames?: Record<string, string> | undefined;
   showStaff?: boolean | undefined;
 }
 
 /** SlotPicker: tira de 7 dias desplazable + cuadricula de horas por franja. Dias sin cupo atenuados con sugerencia de proxima fecha. */
-export function SlotPicker({ buildPath, cacheKey, token, tz, selected, onSelect, emptyAction, initialDate, staffNames, showStaff }: SlotPickerProps) {
+export function SlotPicker({ buildPath, cacheKey, token, tz, selected, onSelect, emptyAction, emptyStaffName, initialDate, staffNames, showStaff }: SlotPickerProps) {
   const today = todayIn(tz);
   const [weekStart, setWeekStart] = useState(initialDate ?? today);
   const [date, setDate] = useState(initialDate ?? today);
@@ -89,7 +91,7 @@ export function SlotPicker({ buildPath, cacheKey, token, tz, selected, onSelect,
         >
           <ChevronLeft size={18} />
         </button>
-        <div className="no-scrollbar flex flex-1 snap-x gap-1.5 overflow-x-auto" role="tablist" aria-label="Dias">
+        <div className="no-scrollbar flex flex-1 snap-x gap-1.5 overflow-x-auto" role="tablist" aria-label="Días">
           {days.map((d) => {
             const count = byDay.get(d)?.length ?? 0;
             const active = d === date;
@@ -120,22 +122,39 @@ export function SlotPicker({ buildPath, cacheKey, token, tz, selected, onSelect,
 
       <p className="text-sm font-medium first-letter:uppercase text-muted-foreground">{dateLabelFromStr(date)}</p>
 
-      {q.isLoading || (q.isFetching && !q.data) ? (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-11" />)}</div>
-      ) : q.isError ? (
-        <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{(q.error as Error).message}</p>
-      ) : daySlots.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-4 py-8 text-center">
+      {q.isError && (
+        <div className="flex flex-col items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-800" role="alert">
+          <p className="font-medium">No pudimos cargar los horarios</p>
+          <p>{(q.error as Error).message || 'Revisa tu conexión e intenta de nuevo.'}</p>
+          <Button type="button" variant="outline" className="min-h-11 bg-card" loading={q.isFetching} onClick={() => void q.refetch()}>Reintentar</Button>
+        </div>
+      )}
+
+      {(q.isLoading || (q.isFetching && !q.data)) && !q.isError ? (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" aria-busy="true" aria-label="Cargando horarios">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-11" />)}</div>
+      ) : !q.isError && daySlots.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-8 text-center" role="status">
           <CalendarX2 className="text-muted-foreground" />
-          <p className="font-medium">No hay horarios este dia</p>
+          <div>
+            <p className="font-medium">
+              {byDay.size === 0 && !next
+                ? (emptyStaffName ? `Sin cupos con ${emptyStaffName} en estas dos semanas` : 'No hay horarios en estas dos semanas')
+                : (emptyStaffName ? `Sin cupos con ${emptyStaffName} este día` : 'No hay horarios este día')}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {next
+                ? 'Los días atenuados no tienen cupo. Elige uno con el punto verde o salta a la próxima fecha.'
+                : 'Prueba con otro profesional o déjanos tu celular: te avisamos si se libera un horario.'}
+            </p>
+          </div>
           {next && (
-            <button type="button" onClick={() => { setDate(next); if (next > addDaysStr(weekStart, 6)) setWeekStart(next); }} className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-              Proxima fecha disponible: <span className="cap-first inline-block">{dateLabelFromStr(next)}</span>
+            <button type="button" onClick={() => { setDate(next); if (next > addDaysStr(weekStart, 6)) setWeekStart(next); }} className="min-h-11 text-sm font-medium text-primary underline-offset-4 hover:underline">
+              Próxima fecha disponible: <span className="cap-first inline-block">{dateLabelFromStr(next)}</span>
             </button>
           )}
           {emptyAction?.(date)}
         </div>
-      ) : (
+      ) : q.data && daySlots.length > 0 ? (
         <div className={cn('flex flex-col gap-4 transition-opacity', q.isFetching && 'opacity-70')}>
           {grouped.filter((g) => g.slots.length > 0).map((g) => (
             <section key={g.key}>
@@ -165,7 +184,7 @@ export function SlotPicker({ buildPath, cacheKey, token, tz, selected, onSelect,
             </section>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

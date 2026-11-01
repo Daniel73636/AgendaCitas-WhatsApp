@@ -216,7 +216,7 @@ export class AppointmentsService {
     const slot = findSlot(avail.slots, input.startsAt, input.staffId === 'any' ? undefined : input.staffId);
     if (!slot) {
       // Hueco ya no ofrecido (tomado por otra persona o fuera de reglas): mismo contrato que la violacion EXCLUDE
-      throw new AppError('SLOT_TAKEN', 'Ese horario ya no esta disponible. Te sugerimos estas alternativas.', { alternatives: await this.alternatives(ctx, input.serviceIds, input.staffId, input.startsAt) });
+      throw new AppError('SLOT_TAKEN', 'Ese horario ya no está disponible. Te sugerimos estas alternativas.', { alternatives: await this.alternatives(ctx, input.serviceIds, input.staffId, input.startsAt) });
     }
     // Con "cualquiera": si el elegido se ocupa en una carrera, probar los demas libres en ese inicio
     const order = input.staffId === 'any' ? [slot.staffId, ...slot.staffIds.filter((s) => s !== slot.staffId)] : [input.staffId];
@@ -292,9 +292,9 @@ export class AppointmentsService {
       const customer = await this.core.upsertCustomer(tx, tenantId, { fullName: input.fullName, phone: input.phone, email: input.email, consent: input.consentWhatsapp, privacy, now });
       if (apt.status !== 'held') {
         if (['confirmed', 'pending'].includes(apt.status) && apt.customerId === customer.id) return { apt, created: false };
-        throw new AppError(apt.status === 'canceled' ? 'HOLD_EXPIRED' : 'CONFLICT', apt.status === 'canceled' ? 'El tiempo de reserva vencio. Elige un horario de nuevo.' : 'Esta reserva ya fue procesada.');
+        throw new AppError(apt.status === 'canceled' ? 'HOLD_EXPIRED' : 'CONFLICT', apt.status === 'canceled' ? 'El tiempo de reserva venció. Elige un horario de nuevo.' : 'Esta reserva ya fue procesada.');
       }
-      if (apt.holdExpiresAt && apt.holdExpiresAt <= now) throw new AppError('HOLD_EXPIRED', 'El tiempo de reserva vencio. Elige un horario de nuevo.');
+      if (apt.holdExpiresAt && apt.holdExpiresAt <= now) throw new AppError('HOLD_EXPIRED', 'El tiempo de reserva venció. Elige un horario de nuevo.');
       const svc = await tx
         .select({ deposit: services.depositCents })
         .from(appointmentItems)
@@ -409,7 +409,7 @@ export class AppointmentsService {
     await this.releaseExpired(ctx.tenant.id);
     const apt = await this.loadApt(ctx.tenant.id, a0.id);
     if (apt.status !== 'held' || apt.source !== 'waitlist') {
-      throw new AppError(apt.status === 'canceled' ? 'HOLD_EXPIRED' : 'CONFLICT', apt.status === 'canceled' ? 'La oferta vencio.' : 'Esta oferta ya no esta disponible.');
+      throw new AppError(apt.status === 'canceled' ? 'HOLD_EXPIRED' : 'CONFLICT', apt.status === 'canceled' ? 'La oferta venció.' : 'Esta oferta ya no está disponible.');
     }
     const updated = await this.update(ctx.tenant.id, apt.id, { status: 'confirmed', holdExpiresAt: null, confirmedByCustomer: true }, apt.version);
     await this.waitlist.markAccepted(apt.id);
@@ -426,7 +426,7 @@ export class AppointmentsService {
     const { apt: a0, ctx } = await this.aptFromToken(token);
     await this.releaseExpired(ctx.tenant.id);
     const apt = await this.loadApt(ctx.tenant.id, a0.id);
-    if (apt.status !== 'pending') throw new AppError('INVALID_TRANSITION', apt.status === 'canceled' ? 'El tiempo para pagar vencio.' : 'Esta cita no requiere pago.');
+    if (apt.status !== 'pending') throw new AppError('INVALID_TRANSITION', apt.status === 'canceled' ? 'El tiempo para pagar venció.' : 'Esta cita no requiere pago.');
     const updated = await this.payDeposit(ctx, apt);
     return this.publicDto(ctx, updated);
   }
@@ -463,7 +463,7 @@ export class AppointmentsService {
       });
       const slot = findSlot(avail.slots, a.startsAt, a.staffId === 'any' ? undefined : a.staffId);
       if (!slot) {
-        throw new AppError('SLOT_UNAVAILABLE', 'Ese horario no esta disponible.', { alternatives: await this.alternatives(ctx, serviceIds, a.staffId, a.startsAt, a.by === 'staff', false) });
+        throw new AppError('SLOT_UNAVAILABLE', 'Ese horario no está disponible.', { alternatives: await this.alternatives(ctx, serviceIds, a.staffId, a.startsAt, a.by === 'staff', false) });
       }
       startIso = slot.start;
       candidates = a.staffId === 'any' ? [apt.staffId, ...slot.staffIds].filter((v, i, arr) => slot.staffIds.includes(v) && arr.indexOf(v) === i) : [a.staffId];
@@ -588,7 +588,7 @@ export class AppointmentsService {
         const date = localDateOf(toAbsMin(input.startsAt), ctx.tz);
         const avail = await this.availability.compute(ctx, { serviceIds: input.serviceIds, staffId: input.staffId, from: date, to: date, ignoreRules: true });
         if (!findSlot(avail.slots, input.startsAt, input.staffId)) {
-          throw new AppError('SLOT_UNAVAILABLE', 'Ese horario no esta disponible para el profesional (fuera de horario, bloqueado u ocupado).', {
+          throw new AppError('SLOT_UNAVAILABLE', 'Ese horario no está disponible para el profesional (fuera de horario, bloqueado u ocupado).', {
             alternatives: await this.alternatives(ctx, input.serviceIds, input.staffId, input.startsAt, true, false),
           });
         }

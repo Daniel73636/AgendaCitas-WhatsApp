@@ -36,8 +36,8 @@ export const dayStartIso = (date: string, tz: string) => new Date(zonedToAbsMin(
 export const dayEndIso = (date: string, tz: string) => new Date(zonedToAbsMin(addDaysStr(date, 1), 0, tz) * 60_000).toISOString();
 export const isoAt = (date: string, minutes: number, tz: string) => new Date(zonedToAbsMin(date, minutes, tz) * 60_000).toISOString();
 
-const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
-const WEEKDAYS_LONG = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const WEEKDAYS_LONG = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 export const weekdayShort = (date: string) => WEEKDAYS[weekdayOf(date)]!;
 export const weekdayLong = (n: number) => WEEKDAYS_LONG[n]!;
 export const weekdayShortN = (n: number) => WEEKDAYS[n]!;
@@ -69,7 +69,7 @@ export const STATUS_META: Record<AppointmentStatus, { label: string; tone: 'neut
   confirmed: { label: 'Confirmada', tone: 'success', bg: 'bg-emerald-50', border: 'border-emerald-500' },
   in_progress: { label: 'En curso', tone: 'info', bg: 'bg-sky-50', border: 'border-sky-500' },
   completed: { label: 'Completada', tone: 'primary', bg: 'bg-violet-50', border: 'border-violet-400' },
-  no_show: { label: 'No asistio', tone: 'danger', bg: 'bg-red-50', border: 'border-red-400' },
+  no_show: { label: 'No asistió', tone: 'danger', bg: 'bg-red-50', border: 'border-red-400' },
   canceled: { label: 'Cancelada', tone: 'neutral', bg: 'bg-zinc-100', border: 'border-zinc-300' },
 };
 
@@ -79,12 +79,12 @@ export const waLink = (phone: string, text?: string) => `https://wa.me/${phone.r
 /** Paises frecuentes para el selector de celular. */
 export const COUNTRIES = [
   { code: '+57', label: 'Colombia', flag: 'CO' },
-  { code: '+52', label: 'Mexico', flag: 'MX' },
-  { code: '+51', label: 'Peru', flag: 'PE' },
+  { code: '+52', label: 'México', flag: 'MX' },
+  { code: '+51', label: 'Perú', flag: 'PE' },
   { code: '+56', label: 'Chile', flag: 'CL' },
   { code: '+54', label: 'Argentina', flag: 'AR' },
   { code: '+593', label: 'Ecuador', flag: 'EC' },
   { code: '+58', label: 'Venezuela', flag: 'VE' },
-  { code: '+34', label: 'Espana', flag: 'ES' },
+  { code: '+34', label: 'España', flag: 'ES' },
   { code: '+1', label: 'EE. UU.', flag: 'US' },
 ] as const;

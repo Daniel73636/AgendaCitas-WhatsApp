@@ -26,7 +26,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ slug:
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 text-3xl backdrop-blur">{tenant.logoUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={tenant.logoUrl} alt="" className="h-full w-full rounded-2xl object-cover" /> : '💇'}</div>
           <div>
             <h1 className="text-2xl font-bold leading-tight">{tenant.name}</h1>
-            <p className="text-sm text-white/85">Reserva en linea · confirmacion por WhatsApp</p>
+            <p className="text-sm text-white/85">Reserva en línea · confirmación por WhatsApp</p>
           </div>
         </div>
         {tenant.description && <p className="relative mt-4 text-sm leading-relaxed text-white/90">{tenant.description}</p>}
@@ -86,7 +86,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ slug:
         </section>
 
         <section className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Politica de cancelacion</p>
+          <p className="font-medium text-foreground">Política de cancelación</p>
           <p>Puedes cancelar o reprogramar gratis hasta {b.settings.cancelMinHours} horas antes desde el enlace que recibes por WhatsApp.</p>
         </section>
       </div>

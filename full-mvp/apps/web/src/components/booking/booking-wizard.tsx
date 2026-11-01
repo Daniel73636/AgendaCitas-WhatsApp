@@ -1,12 +1,12 @@
 'use client';
-import type { HoldDto, OtpRequestResult, OtpVerifyResult, PublicAppointmentDto, PublicBusiness, ServiceDto, SlotDto, StaffDto } from '@agenda/contracts';
+import type { HoldDto, OtpRequestResult, OtpVerifyResult, PublicAppointmentDto, PublicBusiness, PublicReminderFlags, ServiceDto, SlotDto, StaffDto } from '@agenda/contracts';
 import { Badge, Button, Card, Field, Input, Modal, Select, Skeleton, Spinner, cn } from '@agenda/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, CheckCircle2, Clock, MessageCircle, ShieldCheck, Sparkles, Timer, UserRound, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, api, newIdempotencyKey } from '@/lib/api';
-import { COUNTRIES, durationLabel, fmtDateLong, fmtTime, initials, money } from '@/lib/format';
+import { COUNTRIES, durationLabel, fmtDateLong, fmtTime, initials, money, waLink } from '@/lib/format';
 import { toast } from '@/lib/session';
 import { AppointmentSummary } from './appointment-summary';
 import { SlotPicker } from './slot-picker';
@@ -29,53 +29,103 @@ interface Draft {
   idemKey: string;
 }
 const emptyDraft = (): Draft => ({ step: 0, serviceIds: [], staffId: 'any', slot: null, hold: null, name: '', country: '+57', phone: '', email: '', consent: false, privacy: false, idemKey: newIdempotencyKey() });
+const DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
-/** Asistente de reserva: ServicePicker -> StaffPicker -> SlotPicker -> ContactForm -> Confirmacion. */
+function readStoredDraft(raw: string | null): Draft | null {
+  if (!raw) return null;
+  const d = JSON.parse(raw) as Draft & { savedAt?: number };
+  if (d.savedAt && Date.now() - d.savedAt > DRAFT_MAX_AGE_MS) return null;
+  if (d.hold && Date.parse(d.hold.expiresAt) <= Date.now()) return { ...d, hold: null, slot: null, step: Math.min(d.step, 2) as Draft['step'] };
+  return d;
+}
+
+/** Asistente de reserva: servicio, profesional, horario, datos y confirmación. El borrador vive en localStorage para seguir en otra pestaña. */
 export function BookingWizard({ slug }: { slug: string }) {
   const qc = useQueryClient();
-  const biz = useQuery<PublicBusiness>({ queryKey: ['biz', slug], queryFn: () => api<PublicBusiness>(`/v1/public/${slug}`), staleTime: 60_000 });
+  const biz = useQuery<PublicBusiness>({ queryKey: ['biz', slug], queryFn: () => api<PublicBusiness>(`/v1/public/${slug}`), staleTime: 60_000, retry: 1 });
   const [draft, setDraftState] = useState<Draft>(emptyDraft);
   const [restored, setRestored] = useState(false);
   const [done, setDone] = useState<PublicAppointmentDto | null>(null);
   const storageKey = `agenda.draft.${slug}`;
+  const channelRef = useRef<BroadcastChannel | null>(null);
 
-  // Recuperacion del borrador si se recarga la pagina
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(storageKey);
-      if (raw) {
-        const d = JSON.parse(raw) as Draft;
-        if (d.hold && Date.parse(d.hold.expiresAt) <= Date.now()) setDraftState({ ...d, hold: null, slot: null, step: Math.min(d.step, 2) as Draft['step'] });
-        else setDraftState(d);
+    const apply = (raw: string | null) => {
+      try {
+        const d = readStoredDraft(raw);
+        if (d) setDraftState(d);
+      } catch {
+        /* ignorar borrador dañado */
       }
+    };
+    try {
+      let raw = localStorage.getItem(storageKey);
+      if (!raw) {
+        raw = sessionStorage.getItem(storageKey);
+        if (raw) localStorage.setItem(storageKey, raw);
+      }
+      sessionStorage.removeItem(storageKey);
+      if (raw && !readStoredDraft(raw)) localStorage.removeItem(storageKey);
+      apply(raw);
     } catch {
-      /* ignorar */
+      /* modo privado */
     }
     setRestored(true);
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === storageKey) apply(e.newValue);
+    };
+    window.addEventListener('storage', onStorage);
+    try {
+      const bc = new BroadcastChannel(storageKey);
+      channelRef.current = bc;
+      bc.onmessage = (ev: MessageEvent<{ type?: string; draft?: string }>) => {
+        if (ev.data?.type === 'draft') apply(ev.data.draft ?? null);
+        if (ev.data?.type === 'reset') setDraftState(emptyDraft());
+      };
+    } catch {
+      /* BroadcastChannel no disponible */
+    }
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      channelRef.current?.close();
+      channelRef.current = null;
+    };
   }, [storageKey]);
   const setDraft = useCallback(
     (patch: Partial<Draft> | ((d: Draft) => Partial<Draft>)) =>
       setDraftState((d) => {
         const next = { ...d, ...(typeof patch === 'function' ? patch(d) : patch) };
-        try { sessionStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* sin espacio */ }
+        const raw = JSON.stringify({ ...next, savedAt: Date.now() });
+        try { localStorage.setItem(storageKey, raw); } catch { /* sin espacio */ }
+        channelRef.current?.postMessage({ type: 'draft', draft: raw });
         return next;
       }),
     [storageKey],
   );
   const reset = () => {
-    sessionStorage.removeItem(storageKey);
+    try { localStorage.removeItem(storageKey); } catch { /* ignorar */ }
+    channelRef.current?.postMessage({ type: 'reset' });
     setDraftState(emptyDraft());
     setDone(null);
   };
 
   if (biz.isLoading || !restored) return <WizardSkeleton />;
-  if (biz.isError || !biz.data) return <p className="p-6 text-center text-muted-foreground">No pudimos cargar este negocio. {(biz.error as Error)?.message}</p>;
+  if (biz.isError || !biz.data) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col items-center gap-3 p-6 text-center" role="alert">
+        <p className="font-medium">No pudimos cargar este negocio</p>
+        <p className="text-sm text-muted-foreground">{(biz.error as Error)?.message || 'Revisa tu conexión e intenta de nuevo.'}</p>
+        <Button onClick={() => void biz.refetch()} loading={biz.isFetching}>Reintentar</Button>
+      </div>
+    );
+  }
   const b = biz.data;
 
   if (done) {
     return (
       <Shell title="¡Reserva lista!" slug={slug} backHref={`/${slug}`}>
-        <Confirmation apt={done} onChange={setDone} onNew={reset} otpMode={b.otpMode} />
+        <Confirmation apt={done} onChange={setDone} onNew={reset} otpMode={b.otpMode} demoMode={b.demoMode} reminders={b.settings.reminders} whatsappConsent={draft.consent} />
       </Shell>
     );
   }
@@ -90,6 +140,10 @@ export function BookingWizard({ slug }: { slug: string }) {
   return (
     <Shell title="Reservar cita" slug={slug} backHref={draft.step === 0 ? `/${slug}` : undefined} onBack={draft.step > 0 ? () => goto((draft.step - 1) as Draft['step']) : undefined}>
       <Progress step={draft.step} />
+      <p className="mb-4 text-center text-xs text-muted-foreground">
+        <Link href={`/${slug}/privacidad`} className="font-medium text-primary underline underline-offset-2">Política de privacidad</Link>
+        {' '}· Ley 1581 de 2012
+      </p>
       <div key={draft.step} className="animate-fade-in pb-32">
         {draft.step === 0 && (
           <ServicePicker
@@ -98,8 +152,9 @@ export function BookingWizard({ slug }: { slug: string }) {
             currency={b.tenant.currency}
             onChange={(ids) => setDraft({ serviceIds: ids, slot: null })}
             onNext={() => {
-              // si hay un solo profesional elegible, se salta el paso
-              setDraft({ step: eligibleStaffFor(b, draft.serviceIds).length <= 1 ? 2 : 1, staffId: eligibleStaffFor(b, draft.serviceIds).length === 1 ? eligibleStaffFor(b, draft.serviceIds)[0]!.id : 'any' });
+              const eligible = eligibleStaffFor(b, draft.serviceIds);
+              // Un solo profesional: se salta el paso. Cero: se muestra el vacío para que cambie de servicios.
+              setDraft({ step: eligible.length === 1 ? 2 : 1, staffId: eligible.length === 1 ? eligible[0]!.id : 'any' });
             }}
           />
         )}
@@ -135,12 +190,13 @@ export function BookingWizard({ slug }: { slug: string }) {
             setDraft={setDraft}
             hold={draft.hold}
             onExpired={() => {
-              toast.error('Tu tiempo de reserva vencio. Elige un horario de nuevo.');
+              toast.error('Tu tiempo de reserva venció. Elige un horario de nuevo.');
               void qc.invalidateQueries({ queryKey: ['avail'] });
               setDraft({ hold: null, slot: null, step: 2 });
             }}
             onDone={(apt) => {
-              sessionStorage.removeItem(storageKey);
+              try { localStorage.removeItem(storageKey); } catch { /* ignorar */ }
+              channelRef.current?.postMessage({ type: 'reset' });
               setDone(apt);
             }}
             onChangeSlot={() => {
@@ -217,7 +273,8 @@ function WizardSkeleton() {
 // ---------------------------------------------------------------------------
 // 1. ServicePicker
 // ---------------------------------------------------------------------------
-const CATEGORY_EMOJI: Record<string, string> = { Cabello: '💇', Barberia: '💈', Unas: '💅', Bienestar: '💆' };
+const CATEGORY_EMOJI: Record<string, string> = { Cabello: '💇', Barberia: '💈', Barbería: '💈', Unas: '💅', Uñas: '💅', Bienestar: '💆' };
+const CATEGORY_LABEL: Record<string, string> = { Barberia: 'Barbería', Barbería: 'Barbería', Unas: 'Uñas', Uñas: 'Uñas' };
 
 function ServicePicker({ services, selectedIds, currency, onChange, onNext }: { services: ServiceDto[]; selectedIds: string[]; currency: string; onChange: (ids: string[]) => void; onNext: () => void }) {
   const selected = services.filter((s) => selectedIds.includes(s.id));
@@ -230,12 +287,18 @@ function ServicePicker({ services, selectedIds, currency, onChange, onNext }: { 
   }, [services]);
   return (
     <>
-      <h2 className="mb-1 text-xl font-bold">¿Que te quieres hacer?</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Puedes elegir mas de un servicio.</p>
+      <h2 className="mb-1 text-xl font-bold">¿Qué te quieres hacer?</h2>
+      <p className="mb-4 text-sm text-muted-foreground">Puedes elegir más de un servicio.</p>
+      {services.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center" role="status">
+          <p className="font-medium">No hay servicios para reservar en línea</p>
+          <p className="mt-1 text-sm text-muted-foreground">Escríbele al negocio para agendar por otro medio.</p>
+        </div>
+      )}
       <div className="flex flex-col gap-5">
         {groups.map(([cat, list]) => (
           <section key={cat}>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{cat}</h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{CATEGORY_LABEL[cat] ?? cat}</h3>
             <div className="flex flex-col gap-2.5">
               {list.map((s) => {
                 const active = selectedIds.includes(s.id);
@@ -291,17 +354,23 @@ function StaffPicker({ staff, selected, value, currency, onChange, onNext }: { s
   const base = selected.reduce((a, s) => a + s.priceCents, 0);
   return (
     <>
-      <h2 className="mb-1 text-xl font-bold">¿Con quien?</h2>
+      <h2 className="mb-1 text-xl font-bold">¿Con quién?</h2>
       <p className="mb-4 text-sm text-muted-foreground">Elige a tu profesional o deja que busquemos el primer horario libre.</p>
       <div className="flex flex-col gap-2.5">
         <button type="button" aria-pressed={value === 'any'} onClick={() => onChange('any')} className={cn('flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition', value === 'any' ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/40')}>
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary"><Users /></div>
           <div className="flex-1">
             <p className="font-semibold">Cualquiera disponible</p>
-            <p className="text-xs text-muted-foreground">Mas horarios para elegir (recomendado)</p>
+            <p className="text-xs text-muted-foreground">Más horarios para elegir (recomendado)</p>
           </div>
           {value === 'any' && <CheckCircle2 className="text-primary" />}
         </button>
+        {staff.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center" role="status">
+            <p className="font-medium">Nadie del equipo realiza esta combinación</p>
+            <p className="mt-1 text-sm text-muted-foreground">Quita un servicio o elige otra combinación para ver horarios.</p>
+          </div>
+        )}
         {staff.map((s) => (
           <button key={s.id} type="button" aria-pressed={value === s.id} onClick={() => onChange(s.id)} className={cn('flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition', value === s.id ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/40')}>
             <Avatar name={s.displayName} color={s.color} photoUrl={s.photoUrl} />
@@ -314,7 +383,7 @@ function StaffPicker({ staff, selected, value, currency, onChange, onNext }: { s
           </button>
         ))}
       </div>
-      <StickyBar><Button size="lg" onClick={onNext}>Ver horarios</Button></StickyBar>
+      <StickyBar><Button size="lg" disabled={staff.length === 0} onClick={onNext}>Ver horarios</Button></StickyBar>
     </>
   );
 }
@@ -366,7 +435,7 @@ function SlotStep({ slug, business, draft, staff, selected, onPick, onHold }: { 
   const total = selected.reduce((a, s) => a + s.priceCents, 0);
   return (
     <>
-      <h2 className="mb-1 text-xl font-bold">Elige dia y hora</h2>
+      <h2 className="mb-1 text-xl font-bold">Elige día y hora</h2>
       <p className="mb-4 text-sm text-muted-foreground">Horarios en hora de {business.tenant.name} ({tz.split('/')[1]?.replace('_', ' ')}).</p>
       <SlotPicker
         tz={tz}
@@ -376,8 +445,9 @@ function SlotStep({ slug, business, draft, staff, selected, onPick, onHold }: { 
         onSelect={(s) => { onPick(s); setAlternatives([]); }}
         staffNames={staffNames}
         showStaff={draft.staffId === 'any' && staff.length > 1}
+        emptyStaffName={draft.staffId === 'any' ? undefined : staff.find((s) => s.id === draft.staffId)?.displayName}
         emptyAction={(date) => (
-          <Button variant="outline" size="sm" onClick={() => setWaitDate(date)}><Timer size={14} /> Avisarme si se libera un cupo</Button>
+          <Button variant="outline" className="min-h-11" onClick={() => setWaitDate(date)}><Timer size={14} /> Avísame si se libera un cupo</Button>
         )}
       />
       {alternatives.length > 0 && (
@@ -437,7 +507,7 @@ function WaitlistModal({ open, onClose, slug, date, draft, tz }: { open: boolean
   }
   return (
     <Modal open={open} onClose={onClose} title="Lista de espera" size="sm" footer={<Button onClick={submit} loading={busy} disabled={name.length < 2 || phone.length < 7 || !privacy}>Anotarme</Button>}>
-      <p className="mb-3 text-sm text-muted-foreground">Si alguien cancela ese dia, te ofrecemos el cupo por WhatsApp y lo reservamos 10 minutos para ti.</p>
+      <p className="mb-3 text-sm text-muted-foreground">Si alguien cancela ese día, te ofrecemos el cupo por WhatsApp y lo reservamos 10 minutos para ti.</p>
       <div className="flex flex-col gap-3">
         <Field label="Nombre"><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
         <Field label="Celular (WhatsApp)"><Input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="3001234567" /></Field>
@@ -502,9 +572,9 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
       const r = await api<OtpRequestResult>(`/v1/public/${slug}/otp/request`, { method: 'POST', body: { phone: e164 } });
       setHint(r.hint ?? '');
       setPhase('otp');
-      toast.info(r.mock ? 'Codigo enviado (modo demostracion).' : 'Te enviamos un codigo por WhatsApp.');
+      toast.info(r.mock ? 'Código enviado (modo demostración).' : 'Te enviamos un código por WhatsApp.');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No pudimos enviar el codigo');
+      setError(e instanceof Error ? e.message : 'No pudimos enviar el código');
     } finally {
       setBusy(false);
     }
@@ -545,24 +615,24 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
       <h2 className="mb-3 text-xl font-bold">Tus datos</h2>
       <div className="flex flex-col gap-4">
         <Field label="Nombre completo" error={touched && !nameOk ? 'Escribe tu nombre' : undefined}>
-          <Input autoComplete="name" value={draft.name} onChange={(e) => setDraft({ name: e.target.value })} placeholder="Ej: Laura Gomez" disabled={phase === 'otp'} />
+          <Input autoComplete="name" value={draft.name} onChange={(e) => setDraft({ name: e.target.value })} placeholder="Ej: Laura Gómez" disabled={phase === 'otp'} />
         </Field>
-        <Field label="Celular (WhatsApp)" error={touched && !phoneOk ? 'Revisa tu numero (Colombia: 10 digitos, empieza por 3)' : undefined} hint="Aqui recibiras la confirmacion y los recordatorios.">
+        <Field label="Celular (WhatsApp)" error={touched && !phoneOk ? 'Revisa tu número (Colombia: 10 dígitos, empieza por 3)' : undefined} hint="Aquí recibirás la confirmación y los recordatorios.">
           <div className="flex gap-2">
-            <Select aria-label="Pais" className="w-28 shrink-0" value={draft.country} onChange={(e) => setDraft({ country: e.target.value })} disabled={phase === 'otp'}>
+            <Select aria-label="País" className="w-28 shrink-0" value={draft.country} onChange={(e) => setDraft({ country: e.target.value })} disabled={phase === 'otp'}>
               {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
             </Select>
             <Input inputMode="tel" autoComplete="tel-national" value={draft.phone} onChange={(e) => setDraft({ phone: e.target.value })} placeholder="300 123 4567" disabled={phase === 'otp'} />
           </div>
         </Field>
-        <Field label="Correo (opcional)" error={touched && !emailOk ? 'Correo invalido' : undefined}>
+        <Field label="Correo (opcional)" error={touched && !emailOk ? 'Correo inválido' : undefined}>
           <Input type="email" autoComplete="email" value={draft.email} onChange={(e) => setDraft({ email: e.target.value })} disabled={phase === 'otp'} />
         </Field>
         <label className="flex items-start gap-3 rounded-2xl border border-border bg-card p-3 text-sm">
           <input type="checkbox" className="mt-1 h-4 w-4 accent-[hsl(var(--primary))]" checked={draft.consent} onChange={(e) => setDraft({ consent: e.target.checked })} />
           <span>
             <span className="flex items-center gap-1.5 font-medium"><MessageCircle size={14} className="text-success" /> Quiero recibir recordatorios por WhatsApp</span>
-            <span className="text-xs text-muted-foreground">Te escribiremos solo sobre esta cita: confirmacion y recordatorios para que no se te pase. Puedes cancelar cuando quieras. Si no lo marcas, no te enviaremos recordatorios.</span>
+            <span className="text-xs text-muted-foreground">Te escribiremos solo sobre esta cita: confirmación y recordatorios para que no se te pase. Puedes cancelar cuando quieras. Si no lo marcas, no te enviaremos recordatorios.</span>
           </span>
         </label>
         <label className={cn('flex items-start gap-3 rounded-2xl border bg-card p-3 text-sm', touched && !privacyOk ? 'border-red-400' : 'border-border')}>
@@ -578,7 +648,7 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
 
         {phase === 'otp' && (
           <Card className="animate-pop-in border-primary/40 p-4">
-            <p className="flex items-center gap-2 text-sm font-medium"><ShieldCheck size={16} className="text-primary" /> Ingresa el codigo de 6 digitos enviado a {e164}</p>
+            <p className="flex items-center gap-2 text-sm font-medium"><ShieldCheck size={16} className="text-primary" /> Ingresa el código de 6 dígitos enviado a {e164}</p>
             <Input
               autoFocus
               inputMode="numeric"
@@ -588,10 +658,10 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               className="mt-3 h-12 text-center text-2xl tracking-[0.5em] tabular-nums"
               placeholder="······"
-              aria-label="Codigo de verificacion"
+              aria-label="Código de verificación"
             />
             {hint && <p className="mt-2 rounded-lg bg-warning/20 px-3 py-1.5 text-xs text-warning-foreground"><Sparkles size={12} className="mr-1 inline" />{hint}</p>}
-            <button type="button" className="mt-2 text-xs text-primary underline underline-offset-2" onClick={sendCode}>Reenviar codigo</button>
+            <button type="button" className="mt-2 text-xs text-primary underline underline-offset-2" onClick={sendCode}>Reenviar código</button>
           </Card>
         )}
         {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
@@ -599,7 +669,7 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
 
       <StickyBar>
         {phase === 'form' ? (
-          <Button size="lg" loading={busy} onClick={sendCode}>Enviar codigo y continuar</Button>
+          <Button size="lg" loading={busy} onClick={sendCode}>Enviar código y continuar</Button>
         ) : (
           <Button size="lg" loading={busy} disabled={code.length !== 6} onClick={verifyAndBook}>Verificar y confirmar reserva</Button>
         )}
@@ -611,14 +681,29 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
 // ---------------------------------------------------------------------------
 // 5. Confirmacion (y pago del anticipo si aplica)
 // ---------------------------------------------------------------------------
-function Confirmation({ apt, onChange, onNew, otpMode }: { apt: PublicAppointmentDto; onChange: (a: PublicAppointmentDto) => void; onNew: () => void; otpMode: 'mock' | 'real' }) {
+function reminderCopy(flags: PublicReminderFlags, status: PublicAppointmentDto['status'], consent: boolean): string {
+  if (status === 'pending' || status === 'held') return 'Los recordatorios se programan cuando la cita quede confirmada y hayas autorizado WhatsApp.';
+  if (!consent) return 'No enviaremos recordatorios por WhatsApp porque no autorizaste los mensajes. Agrega la cita a tu calendario para no olvidarla.';
+  const bits: string[] = [];
+  if (flags.confirm) bits.push('la confirmación');
+  if (flags.r24) bits.push('un aviso 24 horas antes');
+  if (flags.r6) bits.push('otro 6 horas antes');
+  if (flags.r2) bits.push('otro 2 horas antes');
+  if (bits.length === 0) return 'Este negocio no tiene recordatorios automáticos. Guarda la cita en tu calendario.';
+  return `Por WhatsApp te enviaremos ${bits.join(', ')}.`;
+}
+
+function Confirmation({ apt, onChange, onNew, otpMode, demoMode, reminders, whatsappConsent }: {
+  apt: PublicAppointmentDto; onChange: (a: PublicAppointmentDto) => void; onNew: () => void; otpMode: 'mock' | 'real';
+  demoMode: boolean; reminders: PublicReminderFlags; whatsappConsent: boolean;
+}) {
   const [paying, setPaying] = useState(false);
   const pending = apt.status === 'pending';
   async function pay() {
     setPaying(true);
     try {
       onChange(await api<PublicAppointmentDto>(`/v1/public/appointments/${apt.token}/pay`, { method: 'POST' }));
-      toast.success('Pago recibido. ¡Tu cita esta confirmada!');
+      toast.success('Pago recibido. ¡Tu cita está confirmada!');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'No se pudo procesar el pago');
     } finally {
@@ -631,22 +716,36 @@ function Confirmation({ apt, onChange, onNew, otpMode }: { apt: PublicAppointmen
         <div className={cn('flex h-16 w-16 items-center justify-center rounded-full text-white', pending ? 'bg-amber-500' : 'bg-success')}>
           {pending ? <Timer size={32} /> : <Check size={34} />}
         </div>
-        <h2 className="text-2xl font-bold">{pending ? 'Falta el anticipo' : '¡Tu cita esta confirmada!'}</h2>
+        <h2 className="text-2xl font-bold">{pending ? 'Falta el anticipo' : '¡Tu cita está confirmada!'}</h2>
         <p className="text-sm text-muted-foreground">
-          {pending ? 'Paga el anticipo para asegurar tu horario.' : <>Te enviamos la confirmacion por WhatsApp{otpMode === 'mock' ? ' (modo demo: se registra en el servidor y en el panel → Mensajes)' : ''}.</>}
+          {pending
+            ? (demoMode ? 'En esta demostración puedes simular el pago del anticipo para asegurar el horario.' : 'El pago en línea no está habilitado. Coordina el anticipo con el negocio para no perder el horario.')
+            : <>Te enviamos la confirmación por WhatsApp{otpMode === 'mock' ? ' (modo demo: se registra en el servidor y en el panel → Mensajes)' : ''}.</>}
         </p>
       </div>
       <AppointmentSummary apt={apt} />
-      {pending && (
+      <Card className="p-4 text-sm">
+        <p className="font-semibold">Recordatorios</p>
+        <p className="mt-1 text-muted-foreground">{reminderCopy(reminders, apt.status, whatsappConsent)}</p>
+      </Card>
+      {pending && demoMode && (
         <Card className="border-warning/50 bg-warning/10 p-4">
           <p className="font-semibold">Pagar anticipo: {money(apt.depositRequiredCents, apt.currency)}</p>
-          <p className="mb-3 text-sm text-muted-foreground">Pasarela simulada para la demo. Tienes unos minutos antes de que el horario se libere.</p>
+          <p className="mb-3 text-sm text-muted-foreground">Pasarela simulada, solo en modo demostración. Tienes unos minutos antes de que el horario se libere.</p>
           <Button size="lg" className="w-full" loading={paying} onClick={pay}>Pagar ahora (simulado)</Button>
         </Card>
+      )}
+      {pending && !demoMode && apt.business.phone && (
+        <a href={waLink(apt.business.phone, 'Hola, quiero coordinar el anticipo de mi cita')} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-card text-base font-medium hover:bg-muted">
+          Escribir al negocio por WhatsApp
+        </a>
       )}
       <Link href={`/${apt.business.slug}/cita/${apt.token}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary text-base font-medium text-primary-foreground hover:bg-primary/90">
         <UserRound size={18} /> Ver o modificar mi cita
       </Link>
+      <p className="text-center text-xs text-muted-foreground">
+        <Link href={`/${apt.business.slug}/privacidad`} className="underline underline-offset-2">Política de privacidad</Link>
+      </p>
       <Button variant="ghost" onClick={onNew}>Reservar otra cita</Button>
     </div>
   );

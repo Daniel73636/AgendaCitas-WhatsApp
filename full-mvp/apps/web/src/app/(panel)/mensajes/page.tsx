@@ -10,10 +10,10 @@ import { fmtDateTime, fmtTime, initials } from '@/lib/format';
 import { useApiMutation, useAuthed, usePQuery } from '@/lib/panel';
 
 const QUICK = [
-  'Hola, con gusto te ayudamos. ¿Que dia y hora prefieres?',
-  'Tu cita quedo confirmada. ¡Te esperamos!',
+  'Hola, con gusto te ayudamos. ¿Qué día y hora prefieres?',
+  'Tu cita quedó confirmada. ¡Te esperamos!',
   'Gracias por avisarnos. Ya reprogramamos tu cita.',
-  'Estamos ubicados en la sede principal. Te comparto la ubicacion por aqui.',
+  'Estamos ubicados en la sede principal. Te comparto la ubicación por aquí.',
 ];
 
 function Inbox() {
@@ -53,7 +53,7 @@ function Inbox() {
         {/* Panel de chat */}
         <div className={cn('flex min-h-0 flex-col', !phone && 'hidden md:flex')}>
           {!phone ? (
-            <div className="m-auto text-center text-muted-foreground"><MessageSquare className="mx-auto mb-2" /> Elige una conversacion</div>
+            <div className="m-auto text-center text-muted-foreground"><MessageSquare className="mx-auto mb-2" /> Elige una conversación</div>
           ) : (
             <>
               <div className="flex items-center gap-3 border-b border-border px-3 py-2.5">

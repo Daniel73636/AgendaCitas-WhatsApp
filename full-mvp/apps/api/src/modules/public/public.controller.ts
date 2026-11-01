@@ -90,8 +90,15 @@ export class PublicController {
       settings: {
         holdMinutes: ctx.settings.holdMinutes, cancelMinHours: ctx.settings.cancelMinHours,
         rescheduleMinHours: ctx.settings.rescheduleMinHours, maxAdvanceDays: ctx.settings.maxAdvanceDays,
+        reminders: {
+          confirm: ctx.reminderPolicy.confirm,
+          r24: ctx.reminderPolicy.r24,
+          r6: ctx.reminderPolicy.r6,
+          r2: ctx.reminderPolicy.r2,
+        },
       },
       otpMode: isMockOtp(this.config) ? 'mock' : 'real',
+      demoMode: this.config.demoMode,
     };
   }
 

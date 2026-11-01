@@ -50,7 +50,7 @@ export async function api<T>(path: string, opts: ApiOptions = {}): Promise<T> {
     });
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e;
-    throw new ApiError(0, 'NETWORK', 'Sin conexion con el servidor. Revisa tu internet e intenta de nuevo.');
+    throw new ApiError(0, 'NETWORK', 'Sin conexión con el servidor. Revisa tu internet e intenta de nuevo.');
   }
   if (res.status === 204) return undefined as T;
   const text = await res.text();

@@ -34,7 +34,7 @@ export async function shareLocation(a: PublicAppointmentDto) {
     if (navigator.share) await navigator.share({ title: a.business.name, text, ...(url ? { url } : {}) });
     else {
       await navigator.clipboard.writeText(`${text}${url ? ` ${url}` : ''}`);
-      toast.success('Ubicacion copiada al portapapeles');
+      toast.success('Ubicación copiada al portapapeles');
     }
   } catch {
     /* cancelado */
@@ -84,10 +84,10 @@ export function AppointmentSummary({ apt, compact }: { apt: PublicAppointmentDto
           <Button variant="outline" size="sm" onClick={() => downloadIcs(apt)}><CalendarPlus size={15} /> Agregar al calendario</Button>
           {apt.mapsUrl && (
             <a href={apt.mapsUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-medium hover:bg-muted">
-              <MapPin size={15} /> Como llegar
+              <MapPin size={15} /> Cómo llegar
             </a>
           )}
-          <Button variant="outline" size="sm" onClick={() => shareLocation(apt)}><Share2 size={15} /> Compartir ubicacion</Button>
+          <Button variant="outline" size="sm" onClick={() => shareLocation(apt)}><Share2 size={15} /> Compartir ubicación</Button>
           <a href={googleCalendarUrl(calendarEvent(apt))} target="_blank" rel="noreferrer" className="text-center text-xs text-primary underline-offset-4 hover:underline sm:col-span-3">
             O abrir en Google Calendar
           </a>

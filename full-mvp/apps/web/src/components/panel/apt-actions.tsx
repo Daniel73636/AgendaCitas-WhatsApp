@@ -124,7 +124,7 @@ export function AppointmentRow({ apt, showStaff = true, compact }: { apt: Appoin
         <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
           {canTransition(apt.status, 'in_progress') && <Button size="sm" variant="outline" loading={m.checkIn.isPending} onClick={() => m.checkIn.mutate(apt)}><LogIn size={14} /> Llego</Button>}
           {canTransition(apt.status, 'completed') && <Button size="sm" onClick={() => setCompleting(true)}><CheckCircle2 size={14} /> Completar</Button>}
-          {canTransition(apt.status, 'no_show') && apt.status !== 'in_progress' && <Button size="sm" variant="outline" loading={m.noShow.isPending} onClick={() => m.noShow.mutate(apt)}><UserX size={14} /> No asistio</Button>}
+          {canTransition(apt.status, 'no_show') && apt.status !== 'in_progress' && <Button size="sm" variant="outline" loading={m.noShow.isPending} onClick={() => m.noShow.mutate(apt)}><UserX size={14} /> No asistió</Button>}
           {apt.status === 'pending' && <PayDepositButton apt={apt} />}
           {canTransition(apt.status, 'canceled') && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setCanceling(true)}><XCircle size={14} /> Cancelar</Button>}
         </div>

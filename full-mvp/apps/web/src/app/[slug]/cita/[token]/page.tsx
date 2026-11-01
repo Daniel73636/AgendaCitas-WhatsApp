@@ -4,7 +4,7 @@ import { Button, Card, EmptyState, Modal, Skeleton, Textarea } from '@agenda/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowLeft, CalendarClock, MessageCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { AppointmentSummary } from '@/components/booking/appointment-summary';
 import { SlotPicker } from '@/components/booking/slot-picker';
 import { ApiError, api } from '@/lib/api';
@@ -25,6 +25,14 @@ export default function ManageAppointmentPage({ params }: { params: Promise<{ sl
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [alternatives, setAlternatives] = useState<SlotDto[]>([]);
+  const [demoMode, setDemoMode] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancel = false;
+    api<{ demoMode: boolean }>('/v1/auth/config')
+      .then((c) => { if (!cancel) setDemoMode(!!c.demoMode); })
+      .catch(() => { if (!cancel) setDemoMode(false); });
+    return () => { cancel = true; };
+  }, []);
 
   const apt = q.data;
   const set = (a: PublicAppointmentDto) => qc.setQueryData(['public-apt', token], a);
@@ -60,17 +68,36 @@ export default function ManageAppointmentPage({ params }: { params: Promise<{ sl
             {apt.status === 'held' && (
               <Card className="border-primary/40 bg-secondary p-4">
                 <p className="font-semibold">Hay un cupo reservado para ti</p>
-                <p className="mb-3 text-sm text-muted-foreground">Se libero este horario de la lista de espera. Aceptalo antes de que venza ({apt.holdExpiresAt ? `hasta las ${fmtTime(apt.holdExpiresAt, apt.business.timezone)}` : ''}).</p>
+                <p className="mb-3 text-sm text-muted-foreground">Se liberó este horario de la lista de espera. Acéptalo antes de que venza ({apt.holdExpiresAt ? `hasta las ${fmtTime(apt.holdExpiresAt, apt.business.timezone)}` : ''}).</p>
                 <Button className="w-full" loading={busy} onClick={async () => { const r = await act(() => api<PublicAppointmentDto>(`/v1/public/appointments/${token}/accept`, { method: 'POST' }), '¡Cupo confirmado!'); if (r) set(r); }}>Lo quiero</Button>
               </Card>
             )}
-            {apt.status === 'pending' && (
+            {apt.status === 'pending' && demoMode === null && <Skeleton className="h-24" />}
+            {apt.status === 'pending' && demoMode === true && (
               <Card className="border-warning/50 bg-warning/10 p-4">
                 <p className="font-semibold">Pendiente de anticipo: {money(apt.depositRequiredCents, apt.currency)}</p>
+                <p className="mb-2 text-sm text-muted-foreground">Pasarela simulada, solo en modo demostración.</p>
                 <Button className="mt-2 w-full" loading={busy} onClick={async () => { const r = await act(() => api<PublicAppointmentDto>(`/v1/public/appointments/${token}/pay`, { method: 'POST' }), 'Pago recibido');  if (r) set(r); }}>Pagar anticipo (simulado)</Button>
               </Card>
             )}
+            {apt.status === 'pending' && demoMode === false && (
+              <Card className="border-warning/50 bg-warning/10 p-4">
+                <p className="font-semibold">Pendiente de anticipo: {money(apt.depositRequiredCents, apt.currency)}</p>
+                <p className="mb-3 text-sm text-muted-foreground">El pago en línea no está habilitado. Coordina el anticipo directamente con el negocio para no perder el horario.</p>
+                {apt.business.phone && <a href={waLink(apt.business.phone, 'Hola, quiero coordinar el anticipo de mi cita')} target="_blank" rel="noreferrer" className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-border bg-card text-sm font-medium hover:bg-muted">Escribir por WhatsApp</a>}
+              </Card>
+            )}
             <AppointmentSummary apt={apt} />
+            {(apt.status === 'confirmed' || apt.status === 'pending') && (
+              <Card className="p-4 text-sm">
+                <p className="font-semibold">Recordatorios</p>
+                <p className="mt-1 text-muted-foreground">
+                  {apt.status === 'pending'
+                    ? 'Los recordatorios por WhatsApp se programan cuando la cita quede confirmada.'
+                    : 'Si autorizaste WhatsApp, te escribimos al confirmar y antes de la cita (por defecto, 24 horas y 2 horas antes). También puedes guardar el archivo de calendario.'}
+                </p>
+              </Card>
+            )}
 
             {(apt.status === 'confirmed' || apt.status === 'pending') && (
               <Card className="flex flex-col gap-3 p-4">
@@ -84,7 +111,7 @@ export default function ManageAppointmentPage({ params }: { params: Promise<{ sl
                     {apt.business.phone && <a className="ml-1 font-medium text-primary" href={waLink(apt.business.phone, 'Hola, necesito modificar mi cita')}>Escribir al negocio</a>}
                   </p>
                 )}
-                <p className="flex items-center gap-2 text-xs text-muted-foreground"><MessageCircle size={13} /> Recibiras un mensaje de WhatsApp con cada cambio.</p>
+                <p className="flex items-center gap-2 text-xs text-muted-foreground"><MessageCircle size={13} /> Recibirás un mensaje de WhatsApp con cada cambio.</p>
               </Card>
             )}
           </>
@@ -134,12 +161,12 @@ export default function ManageAppointmentPage({ params }: { params: Promise<{ sl
         footer={
           <>
             <Button variant="ghost" onClick={() => setMode('none')}>Volver</Button>
-            <Button variant="destructive" loading={busy} onClick={async () => { const r = await act(() => api<PublicAppointmentDto>(`/v1/public/appointments/${token}/cancel`, { method: 'POST', body: { reason: reason || undefined } }), 'Cita cancelada'); if (r) set(r); }}>Si, cancelar</Button>
+            <Button variant="destructive" loading={busy} onClick={async () => { const r = await act(() => api<PublicAppointmentDto>(`/v1/public/appointments/${token}/cancel`, { method: 'POST', body: { reason: reason || undefined } }), 'Cita cancelada'); if (r) set(r); }}>Sí, cancelar</Button>
           </>
         }
       >
-        <p className="mb-3 text-sm text-muted-foreground">Liberaremos tu horario para otra persona. {apt && apt.depositPaidCents > 0 && 'Tu anticipo se devolvera segun la politica del negocio.'}</p>
-        <Textarea placeholder="Cuentanos el motivo (opcional)" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <p className="mb-3 text-sm text-muted-foreground">Liberaremos tu horario para otra persona. {apt && apt.depositPaidCents > 0 && 'Tu anticipo se devolverá según la política del negocio.'}</p>
+        <Textarea placeholder="Cuéntanos el motivo (opcional)" value={reason} onChange={(e) => setReason(e.target.value)} />
       </Modal>
     </main>
   );
