@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CloudApiWhatsAppClient, MockWhatsAppClient, buildButtonPayload, parseButtonPayload, parseWebhook, renderTemplate } from '../src';
+import { createHmac } from 'node:crypto';
+import { CloudApiWhatsAppClient, MockWhatsAppClient, buildButtonPayload, parseButtonPayload, parseWebhook, renderTemplate, verifyWebhookSignature } from '../src';
 
 const ID = '0190aaaa-bbbb-7ccc-8ddd-eeeeffff0000';
 
@@ -54,6 +55,16 @@ describe('Cloud API', () => {
 });
 
 describe('webhook', () => {
+  it('verifica la firma HMAC-SHA256 del cuerpo crudo', () => {
+    const body = Buffer.from('{"object":"whatsapp_business_account"}');
+    const secret = 'app-secret-test';
+    const sig = `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
+    expect(verifyWebhookSignature(body, sig, secret)).toBe(true);
+    expect(verifyWebhookSignature(body, sig, 'otro')).toBe(false);
+    expect(verifyWebhookSignature(body, undefined, secret)).toBe(false);
+    expect(verifyWebhookSignature(body, 'sha256=deadbeef', secret)).toBe(false);
+  });
+
   it('parsea botones, texto y estados', () => {
     const ev = parseWebhook({
       entry: [
