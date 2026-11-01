@@ -101,6 +101,12 @@ export function NewAppointmentDialog({ open, onClose, initial, onCreated }: { op
       }
     >
       <div className="flex flex-col gap-5">
+        {initial?.startsAt && (
+          <p className="rounded-xl bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+            Hueco elegido: <b className="first-letter:uppercase">{fmtDateLong(initial.startsAt, tz)}</b>
+            {initial.staffId ? ' · el profesional queda preseleccionado si realiza el servicio.' : ''}
+          </p>
+        )}
         {/* Cliente */}
         <section className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -189,7 +195,7 @@ export function NewAppointmentDialog({ open, onClose, initial, onCreated }: { op
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} /> {s.displayName}
                 </button>
               ))}
-              {eligible.length === 0 && <p className="text-sm text-muted-foreground">Ningun profesional realiza todos los servicios seleccionados.</p>}
+              {eligible.length === 0 && <p className="text-sm text-muted-foreground">Ningún profesional realiza todos los servicios seleccionados.</p>}
             </div>
           </section>
         )}
@@ -230,7 +236,7 @@ export function NewAppointmentDialog({ open, onClose, initial, onCreated }: { op
           <Field label="Notas (opcional)"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: alergia al amoniaco, prefiere tinte sin olor..." /></Field>
           <div className="flex flex-col gap-2">
             <Switch checked={deposit} onChange={setDeposit} label="Exigir anticipo (la cita queda pendiente hasta registrar el pago)" />
-            <Switch checked={sendConfirmation} onChange={setSendConfirmation} label="Enviar confirmacion por WhatsApp" />
+            <Switch checked={sendConfirmation} onChange={setSendConfirmation} label="Enviar confirmación por WhatsApp" />
           </div>
         </section>
 

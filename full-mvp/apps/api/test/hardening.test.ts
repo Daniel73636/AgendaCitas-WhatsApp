@@ -17,6 +17,7 @@ describe('validacion de entorno (zod)', () => {
   it('desarrollo: arranca sin .env con valores seguros por defecto y avisos', () => {
     const c = parseConfig({});
     expect(c.demoMode).toBe(false);
+    expect(c.paymentsProvider).toBe('none');
     expect(c.autoSeed).toBe(false);
     expect(isMockOtp(c)).toBe(false); // OTP_MODE=mock pero sin DEMO_MODE => NO hay codigo 123456
     expect(c.warnings.length).toBeGreaterThan(0);
@@ -25,9 +26,14 @@ describe('validacion de entorno (zod)', () => {
   it('DEMO_MODE=true habilita OTP de demostracion y semilla', () => {
     const c = parseConfig({ DEMO_MODE: 'true' });
     expect(c.demoMode).toBe(true);
+    expect(c.paymentsProvider).toBe('mock');
     expect(c.autoSeed).toBe(true);
     expect(isMockOtp(c)).toBe(true);
     expect(isMockOtp(parseConfig({ DEMO_MODE: 'true', OTP_MODE: 'real' }))).toBe(false);
+    const ignored = parseConfig({ PAYMENTS_PROVIDER: 'mock' });
+    expect(ignored.paymentsProvider).toBe('none');
+    expect(ignored.warnings.some((w) => w.includes('PAYMENTS_PROVIDER'))).toBe(true);
+    expect(() => parseConfig({ ...prodEnv, PAYMENTS_PROVIDER: 'wompi' })).toThrow(/wompi/);
   });
 
   it('produccion valida: sin demo, sin semilla', () => {

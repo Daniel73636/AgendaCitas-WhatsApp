@@ -70,6 +70,8 @@ export const tenantSettings = z.object({
   reviewUrl: z.string().url().optional().or(z.literal('')),
   estimatedNoShowReduction: z.number().min(0).max(1).default(0.06),
   onboardingDismissed: z.boolean().default(false),
+  /** Color de marca de la página pública (#rrggbb). */
+  brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Usa un color hexadecimal, por ejemplo #7c3aed').default('#7c3aed'),
 });
 export type TenantSettings = z.infer<typeof tenantSettings>;
 export const defaultTenantSettings = (): TenantSettings => tenantSettings.parse({});
@@ -81,6 +83,8 @@ export const tenantUpdate = z.object({
   address: z.string().max(200).nullable().optional(),
   timezone: z.string().min(3).optional(),
   settings: tenantSettings.partial().optional(),
+  logoUrl: z.union([z.string().url().max(500), z.literal('')]).nullable().optional(),
+  coverUrl: z.union([z.string().url().max(500), z.literal('')]).nullable().optional(),
 });
 export type TenantUpdate = z.infer<typeof tenantUpdate>;
 
@@ -210,6 +214,8 @@ export interface PublicBusiness {
     currency: string;
     logoUrl: string | null;
     coverUrl: string | null;
+    /** Color de marca (#rrggbb) para la página pública. */
+    brandColor: string;
   };
   services: ServiceDto[];
   staff: StaffDto[];

@@ -9,6 +9,7 @@ import { toast, useSession } from '@/lib/session';
 
 interface TenantView {
   id: string; slug: string; name: string; description: string | null; phone: string | null; currency: string; address: string | null; timezone: string;
+  logoUrl: string | null; coverUrl: string | null;
   settings: TenantSettings; whatsapp: { mode: 'mock' | 'cloud'; connected: boolean; phoneNumberId: string | null }; otpMode: 'mock' | 'real'; publicUrl: string;
 }
 
@@ -18,12 +19,12 @@ export default function SettingsPage() {
   const { role } = useAuthed();
   const owner = role === 'owner';
   const q = usePQuery<TenantView>(['tenant'], '/v1/tenant', { staleTime: 20_000 });
-  const [f, setF] = useState<{ name: string; description: string; phone: string; address: string; timezone: string; s: TenantSettings } | null>(null);
-  useEffect(() => { if (q.data && !f) setF({ name: q.data.name, description: q.data.description ?? '', phone: q.data.phone ?? '', address: q.data.address ?? '', timezone: q.data.timezone, s: q.data.settings }); }, [q.data, f]);
+  const [f, setF] = useState<{ name: string; description: string; phone: string; address: string; timezone: string; logoUrl: string; coverUrl: string; s: TenantSettings } | null>(null);
+  useEffect(() => { if (q.data && !f) setF({ name: q.data.name, description: q.data.description ?? '', phone: q.data.phone ?? '', address: q.data.address ?? '', timezone: q.data.timezone, logoUrl: q.data.logoUrl ?? '', coverUrl: q.data.coverUrl ?? '', s: q.data.settings }); }, [q.data, f]);
   const session = useSession((s) => s.session);
   const setSession = useSession((s) => s.setSession);
   const save = useApiMutation(
-    (_: void, { token }) => api<TenantView>('/v1/tenant', { method: 'PATCH', token, body: { name: f!.name, description: f!.description || null, phone: f!.phone || null, address: f!.address || null, timezone: f!.timezone, settings: f!.s } }),
+    (_: void, { token }) => api<TenantView>('/v1/tenant', { method: 'PATCH', token, body: { name: f!.name, description: f!.description || null, phone: f!.phone || null, address: f!.address || null, timezone: f!.timezone, logoUrl: f!.logoUrl || null, coverUrl: f!.coverUrl || null, settings: f!.s } }),
     { invalidate: [['tenant'], ['onboarding']], success: 'Ajustes guardados', onSuccess: (t) => { if (session) setSession({ ...session, tenant: { ...session.tenant, name: t.name, timezone: t.timezone } }); } },
   );
   if (!q.data || !f) return <div className="mx-auto max-w-3xl space-y-3"><Skeleton className="h-10" /><Skeleton className="h-64" /></div>;
@@ -54,7 +55,15 @@ export default function SettingsPage() {
           <Field label="Nombre"><Input disabled={dis} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
           <Field label="Telefono / WhatsApp"><Input disabled={dis} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
           <Field label="Direccion" className="sm:col-span-2"><Input disabled={dis} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></Field>
-          <Field label="Descripcion" className="sm:col-span-2"><Textarea disabled={dis} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
+          <Field label="Descripción" className="sm:col-span-2"><Textarea disabled={dis} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
+          <Field label="Logo (URL)" hint="Se muestra en la página pública de reservas." className="sm:col-span-2"><Input disabled={dis} value={f.logoUrl} onChange={(e) => setF({ ...f, logoUrl: e.target.value })} placeholder="https://..." /></Field>
+          <Field label="Portada (URL)" className="sm:col-span-2"><Input disabled={dis} value={f.coverUrl} onChange={(e) => setF({ ...f, coverUrl: e.target.value })} placeholder="https://..." /></Field>
+          <Field label="Color de marca" hint="Botones y cabecera de la página pública.">
+            <div className="flex items-center gap-2">
+              <input aria-label="Elegir color" type="color" disabled={dis} value={f.s.brandColor} onChange={(e) => set('brandColor', e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border border-border bg-card" />
+              <Input disabled={dis} value={f.s.brandColor} onChange={(e) => set('brandColor', e.target.value)} className="font-mono" />
+            </div>
+          </Field>
           <Field label="Zona horaria de la sede" hint="Todas las agendas y recordatorios usan esta zona."><Select disabled={dis} value={f.timezone} onChange={(e) => setF({ ...f, timezone: e.target.value })}>
             {['America/Bogota', 'America/Mexico_City', 'America/Lima', 'America/Santiago', 'America/Argentina/Buenos_Aires', 'America/Guayaquil', 'America/Caracas', 'Europe/Madrid', 'America/New_York'].map((z) => <option key={z}>{z}</option>)}
           </Select></Field>

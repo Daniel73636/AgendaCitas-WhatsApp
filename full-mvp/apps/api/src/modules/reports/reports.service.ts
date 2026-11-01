@@ -249,4 +249,31 @@ export class ReportsService {
       totalCents: paying.reduce((a, p) => a + p.cents, 0),
     };
   }
+
+  /** CSV (UTF-8 con BOM) de ocupación, inasistencias y servicios del rango. */
+  async exportCsv(tenantId: string, q: RangeQ): Promise<{ filename: string; csv: string }> {
+    const ctx = await this.tenants.byId(tenantId);
+    const r = this.range(ctx, q);
+    const [occ, ns, rev] = await Promise.all([this.occupancy(tenantId, q), this.noShows(tenantId, q), this.revenue(tenantId, q)]);
+    const lines = [
+      csvRow(['seccion', 'nombre', 'cantidad', 'minutos_reservados', 'minutos_disponibles', 'porcentaje', 'centavos', 'detalle']),
+      ...occ.byStaff.map((s) => csvRow(['ocupacion', s.name, '', s.bookedMin, s.availableMin, s.pct, '', ''])),
+      ...ns.byWeekday.map((d) => csvRow(['inasistencia', WEEKDAY_ES[d.weekday] ?? String(d.weekday), d.noShows, '', '', d.total ? Math.round((d.noShows / d.total) * 100) : 0, '', `${d.noShows} de ${d.total}`])),
+      ...ns.byCustomer.map((c) => csvRow(['inasistencia', c.name, c.noShows, '', '', '', '', c.phone])),
+      ...ns.byStaff.filter((s) => s.noShows > 0).map((s) => csvRow(['inasistencia', s.name, s.noShows, '', '', s.total ? Math.round((s.noShows / s.total) * 100) : 0, '', `${s.noShows} de ${s.total}`])),
+      ...rev.byService.map((s) => csvRow(['servicio', s.name, s.count, '', '', '', s.cents, ''])),
+    ];
+    return { filename: `reportes-${r.from}-${r.to}.csv`, csv: `\uFEFF${lines.join('\n')}\n` };
+  }
+}
+
+const WEEKDAY_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function csvCell(value: string | number): string {
+  const s = String(value);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function csvRow(cells: Array<string | number>): string {
+  return cells.map(csvCell).join(',');
 }

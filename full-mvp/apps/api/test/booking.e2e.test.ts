@@ -427,6 +427,13 @@ describe('reportes y panel', () => {
     const rev = await t.call('GET', '/v1/reports/revenue', { token: admin });
     expect(rev.json.byService.length).toBeGreaterThan(0);
     expect(rev.json.byStaff.every((x: any) => Number.isInteger(x.commissionCents))).toBe(true);
+    const csv = await t.call('GET', `/v1/reports/export?from=${isoDate(-14)}&to=${isoDate(10)}`, { token: admin });
+    expect(csv.status).toBe(200);
+    expect(csv.json.filename).toMatch(/^reportes-.+\.csv$/);
+    expect(csv.json.csv).toContain('ocupacion');
+    expect(csv.json.csv).toContain('inasistencia');
+    expect(csv.json.csv).toContain('servicio');
+    expect((await t.call('GET', '/v1/reports/export')).status).toBe(401);
   });
 
   it('SSE: /v1/events emite appointment.created y reanuda con Last-Event-ID', async () => {

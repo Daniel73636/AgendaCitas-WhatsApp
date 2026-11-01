@@ -39,6 +39,8 @@ export interface AppConfig {
   loginLockMinutes: number;
   /** Exigir aceptacion de la politica de privacidad (Ley 1581) al reservar. */
   privacyConsentRequired: boolean;
+  /** Anticipo: mock solo junto a DEMO_MODE. none no cobra. wompi no está implementado. */
+  paymentsProvider: 'mock' | 'none';
   /** Avisos de arranque (secretos por defecto en desarrollo, etc.). */
   warnings: string[];
 }
@@ -103,6 +105,7 @@ const envSchema = z.object({
   LOGIN_MAX_ATTEMPTS: num(5, 1, 100),
   LOGIN_LOCK_MINUTES: num(15, 1, 1440),
   PRIVACY_CONSENT_REQUIRED: flag(true),
+  PAYMENTS_PROVIDER: z.enum(['mock', 'none', 'wompi']).optional(),
 });
 
 export class ConfigError extends Error {
@@ -167,6 +170,8 @@ export function parseConfig(env: Record<string, string | undefined>, overrides: 
     if (!e.WHATSAPP_APP_SECRET) problems.push('WHATSAPP_APP_SECRET: obligatorio con WHATSAPP_MODE=cloud (firma del webhook).');
   }
 
+  if (e.PAYMENTS_PROVIDER === 'wompi') problems.push('PAYMENTS_PROVIDER=wompi aún no está implementado. Usa mock (solo con DEMO_MODE) o none.');
+
   if (problems.length) throw new ConfigError(problems);
 
   const demoMode = e.DEMO_MODE;
@@ -206,10 +211,22 @@ export function parseConfig(env: Record<string, string | undefined>, overrides: 
     loginMaxAttempts: e.LOGIN_MAX_ATTEMPTS,
     loginLockMinutes: e.LOGIN_LOCK_MINUTES,
     privacyConsentRequired: e.PRIVACY_CONSENT_REQUIRED,
+    paymentsProvider: 'none',
     warnings,
     ...overrides,
   };
+  if (overrides.paymentsProvider === undefined) cfg.paymentsProvider = resolvePayments(e.PAYMENTS_PROVIDER, cfg.demoMode, cfg.warnings);
   return cfg;
+}
+
+/** mock solo confirma anticipos de demostración. Sin DEMO_MODE, mock se ignora. */
+function resolvePayments(raw: 'mock' | 'none' | 'wompi' | undefined, demoMode: boolean, warnings: string[]): 'mock' | 'none' {
+  if (raw === 'none') return 'none';
+  if (raw === 'mock' && !demoMode) {
+    warnings.push('PAYMENTS_PROVIDER=mock sin DEMO_MODE: se ignora. El anticipo público no se simula.');
+    return 'none';
+  }
+  return demoMode ? 'mock' : 'none';
 }
 
 /** Carga `.env` de la raiz del monorepo y valida `process.env`. */

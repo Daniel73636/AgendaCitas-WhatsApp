@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Badge } from '@agenda/ui';
 import { Avatar } from '@/components/booking/booking-wizard';
 import { InstallPrompt } from '@/components/pwa';
+import { normalizeBrand } from '@/lib/brand';
 import { durationLabel, money, waLink } from '@/lib/format';
 import { getBusiness } from '@/lib/public';
 
@@ -17,10 +18,14 @@ export default async function BusinessPage({ params }: { params: Promise<{ slug:
   const groups = new Map<string, typeof b.services>();
   for (const s of b.services) (groups.get(s.category ?? 'Servicios') ?? groups.set(s.category ?? 'Servicios', []).get(s.category ?? 'Servicios')!).push(s);
   const mapUrl = tenant.lat != null && tenant.lng != null ? `https://www.google.com/maps/search/?api=1&query=${tenant.lat},${tenant.lng}` : tenant.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenant.address)}` : null;
+  const brand = normalizeBrand(tenant.brandColor);
+  const heroStyle = tenant.coverUrl
+    ? { backgroundImage: `linear-gradient(135deg, ${brand}e6, ${brand}99), url(${tenant.coverUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { backgroundImage: `linear-gradient(135deg, ${brand}, ${brand}b3)` };
 
   return (
     <main className="mx-auto max-w-2xl pb-28">
-      <section className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-500 px-5 pb-8 pt-12 text-white safe-top">
+      <section className="relative overflow-hidden px-5 pb-8 pt-12 text-white safe-top" style={heroStyle}>
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
         <div className="relative flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 text-3xl backdrop-blur">{tenant.logoUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={tenant.logoUrl} alt="" className="h-full w-full rounded-2xl object-cover" /> : '💇'}</div>

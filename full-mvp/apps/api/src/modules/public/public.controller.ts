@@ -84,6 +84,7 @@ export class PublicController {
       tenant: {
         slug: ctx.tenant.slug, name: ctx.tenant.name, description: ctx.tenant.description, phone: ctx.tenant.phone, address: ctx.location.address,
         lat: ctx.location.lat, lng: ctx.location.lng, timezone: ctx.tz, currency: ctx.tenant.currency, logoUrl: ctx.tenant.logoUrl, coverUrl: ctx.tenant.coverUrl,
+        brandColor: ctx.settings.brandColor,
       },
       services,
       staff: staff.map((s) => ({ ...s, serviceIds: s.serviceIds.filter((id) => publicIds.has(id)), serviceOverrides: s.serviceOverrides.filter((o) => publicIds.has(o.serviceId)) })).filter((s) => s.serviceIds.length > 0),
