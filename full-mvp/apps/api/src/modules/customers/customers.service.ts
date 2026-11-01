@@ -119,11 +119,11 @@ export class CustomersService {
           tags: [...new Set([...into.tags, ...from.tags])], email: into.email ?? from.email, birthday: into.birthday ?? from.birthday,
           consentWhatsapp: into.consentWhatsapp || from.consentWhatsapp, updatedAt: this.clock.now(),
         })
-        .where(eq(customers.id, intoId));
+        .where(and(eq(customers.id, intoId), eq(customers.tenantId, tenantId)));
       await tx
         .update(customers)
         .set({ deletedAt: this.clock.now(), mergedInto: intoId, phoneE164: `${from.phoneE164}#merged-${from.id.slice(0, 8)}`, updatedAt: this.clock.now() })
-        .where(eq(customers.id, fromId));
+        .where(and(eq(customers.id, fromId), eq(customers.tenantId, tenantId)));
     });
     return this.get(tenantId, intoId);
   }

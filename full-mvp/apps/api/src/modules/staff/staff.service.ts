@@ -9,6 +9,8 @@ import {
   eq,
   gt,
   inArray,
+  isNull,
+  services,
   staff,
   staffSchedules,
   staffServices,
@@ -49,6 +51,7 @@ export class StaffService {
     const { db } = this.handle;
     const id = uuidv7();
     const now = this.clock.now();
+    if (input.services?.length) await this.assertServicesInTenant(tenantId, input.services.map((s) => s.serviceId));
     await db.insert(staff).values({
       id, tenantId, locationId, displayName: input.displayName, bio: input.bio ?? null, specialties: input.specialties, color: input.color,
       photoUrl: input.photoUrl ?? null, active: input.active, priority: input.priority, commissionPct: input.commissionPct, createdAt: now, updatedAt: now,
@@ -57,8 +60,22 @@ export class StaffService {
     return this.one(tenantId, id);
   }
 
+  /** Los servicios enlazados deben existir en el mismo negocio (evita vinculos entre tenants). */
+  private async assertServicesInTenant(tenantId: string, serviceIds: string[]) {
+    const unique = [...new Set(serviceIds)];
+    const found = await this.handle.db.select({ id: services.id }).from(services).where(and(eq(services.tenantId, tenantId), inArray(services.id, unique), isNull(services.deletedAt)));
+    if (found.length !== unique.length) throw new AppError('NOT_FOUND', 'Alguno de los servicios no existe en tu negocio.');
+  }
+
+  /** Un profesional (staffId) debe pertenecer al negocio. */
+  async assertStaffInTenant(tenantId: string, staffId: string) {
+    const [s] = await this.handle.db.select({ id: staff.id }).from(staff).where(and(eq(staff.id, staffId), eq(staff.tenantId, tenantId), isNull(staff.deletedAt))).limit(1);
+    if (!s) throw new AppError('NOT_FOUND', 'Profesional no encontrado.');
+  }
+
   private async setServices(tenantId: string, staffId: string, list: NonNullable<StaffInputT['services']>) {
     const { db } = this.handle;
+    await this.assertServicesInTenant(tenantId, list.map((l) => l.serviceId));
     await db.delete(staffServices).where(and(eq(staffServices.tenantId, tenantId), eq(staffServices.staffId, staffId)));
     if (list.length) {
       await db.insert(staffServices).values(
@@ -100,7 +117,7 @@ export class StaffService {
           throw new AppError('HAS_FUTURE_APPOINTMENTS', `${future.length} cita(s) futura(s) usan a este profesional. Reasignalas antes de desactivarlo.`, { details: { count: future.length, proposal: plan } });
         }
         for (const p of plan) {
-          await db.update(appointments).set({ staffId: p.newStaffId!, updatedAt: this.clock.now() }).where(eq(appointments.id, p.appointmentId));
+          await db.update(appointments).set({ staffId: p.newStaffId!, updatedAt: this.clock.now() }).where(and(eq(appointments.id, p.appointmentId), eq(appointments.tenantId, tenantId)));
           this.events.emit(tenantId, 'appointment.updated', { id: p.appointmentId });
         }
       }
@@ -168,6 +185,7 @@ export class StaffService {
   }
 
   async createTimeOff(tenantId: string, locationId: string, input: { staffId?: string | null | undefined; startsAt: string; endsAt: string; reason?: string | null | undefined; isExtraOpening: boolean }): Promise<TimeOffDto> {
+    if (input.staffId) await this.assertStaffInTenant(tenantId, input.staffId);
     const [row] = await this.handle.db
       .insert(staffTimeOff)
       .values({
