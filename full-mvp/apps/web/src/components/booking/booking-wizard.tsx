@@ -25,9 +25,10 @@ interface Draft {
   phone: string;
   email: string;
   consent: boolean;
+  privacy: boolean;
   idemKey: string;
 }
-const emptyDraft = (): Draft => ({ step: 0, serviceIds: [], staffId: 'any', slot: null, hold: null, name: '', country: '+57', phone: '', email: '', consent: false, idemKey: newIdempotencyKey() });
+const emptyDraft = (): Draft => ({ step: 0, serviceIds: [], staffId: 'any', slot: null, hold: null, name: '', country: '+57', phone: '', email: '', consent: false, privacy: false, idemKey: newIdempotencyKey() });
 
 /** Asistente de reserva: ServicePicker -> StaffPicker -> SlotPicker -> ContactForm -> Confirmacion. */
 export function BookingWizard({ slug }: { slug: string }) {
@@ -411,6 +412,7 @@ function SlotStep({ slug, business, draft, staff, selected, onPick, onHold }: { 
 function WaitlistModal({ open, onClose, slug, date, draft, tz }: { open: boolean; onClose: () => void; slug: string; date: string | null; draft: Draft; tz: string }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [privacy, setPrivacy] = useState(false);
   const [busy, setBusy] = useState(false);
   async function submit() {
     if (!date) return;
@@ -422,7 +424,7 @@ function WaitlistModal({ open, onClose, slug, date, draft, tz }: { open: boolean
         method: 'POST',
         body: {
           fullName: name, phone: `${draft.country}${phone.replace(/\D/g, '').replace(/^0+/, '')}`, serviceId: draft.serviceIds[0],
-          staffId: draft.staffId === 'any' ? null : draft.staffId, windowStart: isoAt(date, 0, tz), windowEnd: isoAt(addDaysStr(date, 1), 0, tz), consentWhatsapp: true,
+          staffId: draft.staffId === 'any' ? null : draft.staffId, windowStart: isoAt(date, 0, tz), windowEnd: isoAt(addDaysStr(date, 1), 0, tz), consentWhatsapp: true, privacyAccepted: privacy,
         },
       });
       toast.success('Listo: te avisaremos por WhatsApp si se libera un cupo.');
@@ -434,11 +436,15 @@ function WaitlistModal({ open, onClose, slug, date, draft, tz }: { open: boolean
     }
   }
   return (
-    <Modal open={open} onClose={onClose} title="Lista de espera" size="sm" footer={<Button onClick={submit} loading={busy} disabled={name.length < 2 || phone.length < 7}>Anotarme</Button>}>
+    <Modal open={open} onClose={onClose} title="Lista de espera" size="sm" footer={<Button onClick={submit} loading={busy} disabled={name.length < 2 || phone.length < 7 || !privacy}>Anotarme</Button>}>
       <p className="mb-3 text-sm text-muted-foreground">Si alguien cancela ese dia, te ofrecemos el cupo por WhatsApp y lo reservamos 10 minutos para ti.</p>
       <div className="flex flex-col gap-3">
         <Field label="Nombre"><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
         <Field label="Celular (WhatsApp)"><Input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="3001234567" /></Field>
+        <label className="flex items-start gap-2 text-xs text-muted-foreground">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]" checked={privacy} onChange={(e) => setPrivacy(e.target.checked)} />
+          <span>Autorizo el tratamiento de mis datos personales según la <a href={`/${slug}/privacidad`} target="_blank" rel="noreferrer" className="font-medium text-primary underline">Política de privacidad</a>.</span>
+        </label>
       </div>
     </Modal>
   );
@@ -482,7 +488,8 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
   const phoneOk = /^\+[1-9]\d{7,14}$/.test(e164) && (draft.country !== '+57' || /^3\d{9}$/.test(digits));
   const nameOk = draft.name.trim().length >= 2;
   const emailOk = !draft.email || /^\S+@\S+\.\S+$/.test(draft.email);
-  const formOk = nameOk && phoneOk && emailOk;
+  const privacyOk = draft.privacy;
+  const formOk = nameOk && phoneOk && emailOk && privacyOk;
   const mm = String(Math.floor(left / 60)).padStart(1, '0');
   const ss = String(left % 60).padStart(2, '0');
 
@@ -511,7 +518,7 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
       const apt = await api<PublicAppointmentDto>(`/v1/public/${slug}/bookings`, {
         method: 'POST',
         headers: { 'Idempotency-Key': draft.idemKey },
-        body: { holdId: hold.holdId, fullName: draft.name.trim(), phone: e164, email: draft.email || undefined, consentWhatsapp: draft.consent, otpToken: v.otpToken },
+        body: { holdId: hold.holdId, fullName: draft.name.trim(), phone: e164, email: draft.email || undefined, consentWhatsapp: draft.consent, privacyAccepted: draft.privacy, otpToken: v.otpToken },
       });
       onDone(apt);
     } catch (e) {
@@ -556,6 +563,16 @@ function ContactStep({ slug, business, draft, setDraft, hold, onExpired, onDone,
           <span>
             <span className="flex items-center gap-1.5 font-medium"><MessageCircle size={14} className="text-success" /> Quiero recibir recordatorios por WhatsApp</span>
             <span className="text-xs text-muted-foreground">Te escribiremos solo sobre esta cita: confirmacion y recordatorios para que no se te pase. Puedes cancelar cuando quieras. Si no lo marcas, no te enviaremos recordatorios.</span>
+          </span>
+        </label>
+        <label className={cn('flex items-start gap-3 rounded-2xl border bg-card p-3 text-sm', touched && !privacyOk ? 'border-red-400' : 'border-border')}>
+          <input type="checkbox" required className="mt-1 h-4 w-4 accent-[hsl(var(--primary))]" checked={draft.privacy} disabled={phase === 'otp'} onChange={(e) => setDraft({ privacy: e.target.checked })} aria-describedby="privacy-help" />
+          <span>
+            <span className="flex items-center gap-1.5 font-medium"><ShieldCheck size={14} className="text-primary" /> Autorizo el tratamiento de mis datos personales</span>
+            <span id="privacy-help" className="text-xs text-muted-foreground">
+              Los usaremos solo para gestionar tu cita, según la <a href={`/${slug}/privacidad`} target="_blank" rel="noreferrer" className="font-medium text-primary underline underline-offset-2">Política de privacidad</a> (Ley 1581 de 2012). Es obligatorio para reservar.
+            </span>
+            {touched && !privacyOk && <span className="mt-1 block text-xs text-red-700" role="alert">Debes aceptar para continuar.</span>}
           </span>
         </label>
 

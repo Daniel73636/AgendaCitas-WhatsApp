@@ -283,6 +283,8 @@ export const bookingInput = z.object({
   email: z.string().email().optional().or(z.literal('')),
   notes: z.string().max(500).optional(),
   consentWhatsapp: z.boolean(),
+  /** Autorizacion de tratamiento de datos personales (Ley 1581 de 2012); obligatoria salvo PRIVACY_CONSENT_REQUIRED=false. */
+  privacyAccepted: z.boolean().optional(),
   otpToken: z.string().optional(),
   otpCode: z.string().regex(/^\d{4,8}$/).optional(),
   /** Campo trampa anti-bots (debe ir vacio). */
@@ -321,6 +323,7 @@ export const waitlistInput = z.object({
   windowStart: isoDateTime,
   windowEnd: isoDateTime,
   consentWhatsapp: z.boolean().default(true),
+  privacyAccepted: z.boolean().optional(),
 });
 
 // ---------------------------------------------------------------------------
