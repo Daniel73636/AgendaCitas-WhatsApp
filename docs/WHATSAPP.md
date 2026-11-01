@@ -17,14 +17,14 @@ Para producción real, activa `WHATSAPP_MODE=cloud` y completa lo siguiente en M
 | `WHATSAPP_ACCESS_TOKEN` | Token del sistema (permanente) o token de usuario de larga duración |
 | `WHATSAPP_PHONE_NUMBER_ID` | Consola WhatsApp → API Setup |
 | `WHATSAPP_APP_SECRET` | App settings → Basic → App Secret (firma `X-Hub-Signature-256`) |
-| `WHATSAPP_VERIFY_TOKEN` | Cadena que **tú** defines; la mismas en Meta al suscribir el webhook |
+| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Cadena que **tú** defines; la misma en Meta al suscribir el webhook |
 
 En `NODE_ENV=production` con `WHATSAPP_MODE=cloud` la API **no arranca** sin phone id, access token y app secret.
 
 ## 3. Webhook
 
 1. URL pública HTTPS: `https://<api>/v1/webhooks/whatsapp`
-2. Verify token = `WHATSAPP_VERIFY_TOKEN`
+2. Verify token = `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
 3. Suscribe el campo `messages`
 4. La API valida la firma HMAC-SHA256 del cuerpo crudo; sin firma válida responde 403
 

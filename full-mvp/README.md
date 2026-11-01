@@ -8,6 +8,15 @@ PWA multiplataforma (**PC + Android**, instalable) para que un negocio de servic
 
 > Datos demo: negocio **Belleza Demo** (`/belleza-demo`), 3 profesionales, 5 servicios, horarios Lun–Sáb, ~200 citas y mensajes de ejemplo.
 > Panel: `admin@belleza-demo.com` / `demo1234` · Código OTP de prueba: **`123456`** · WhatsApp en modo **mock** (se registra en consola y en *Mensajes*).
+> La cuenta demo y el OTP `123456` solo existen con `DEMO_MODE=true` (así viene en `.env.example` para desarrollo). En producción debe ser `false`.
+
+## Documentación
+
+- [Checklist de lanzamiento](../docs/CHECKLIST_LANZAMIENTO.md)
+- [Changelog de mejoras (fases 1–4)](../docs/CHANGELOG_MEJORAS.md)
+- [WhatsApp Cloud API](../docs/WHATSAPP.md)
+- [Auditoría de producción](../docs/AUDITORIA.md)
+- [Decisiones de ingeniería](../docs/DECISIONES.md)
 
 ---
 
@@ -138,7 +147,9 @@ node scripts/smoke.mjs       # prueba de humo extremo a extremo contra la API en
 
 ## 8. Variables de entorno
 
-Ver `.env.example` (comentado). Las más importantes: `DATABASE_URL`, `PGLITE_DIR`, `AUTO_SEED`, `REDIS_URL`, `AUTH_SECRET`, `FIELD_ENCRYPTION_KEY`, `OTP_MODE`/`OTP_MOCK_CODE`, `WHATSAPP_MODE` (`mock`|`cloud`), `EMBEDDED_WORKER`, `NEXT_PUBLIC_API_URL`.
+Ver `.env.example` (comentado). Las más importantes: `DEMO_MODE`, `DATABASE_URL`, `PGLITE_DIR`, `AUTO_SEED`, `REDIS_URL`, `AUTH_SECRET`, `FIELD_ENCRYPTION_KEY`, `OTP_MODE`/`OTP_MOCK_CODE`, `WHATSAPP_MODE` (`mock`|`cloud`), `WHATSAPP_APP_SECRET`, `PAYMENTS_PROVIDER` (`none`|`mock`; `wompi` no arranca), `EMBEDDED_WORKER`, `NEXT_PUBLIC_API_URL`.
+
+Logo, portada y color de marca **no** son variables de entorno: se guardan por negocio en Ajustes del panel.
 
 ### Conectar WhatsApp real (Cloud API de Meta)
 1. Crea la app en Meta for Developers y agrega *WhatsApp*. Copia `Phone number ID` y un token permanente.
