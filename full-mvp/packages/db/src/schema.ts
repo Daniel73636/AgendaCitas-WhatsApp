@@ -167,6 +167,9 @@ export const customers = pgTable(
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     consentWhatsapp: boolean('consent_whatsapp').notNull().default(false),
     mergedInto: uuid('merged_into'),
+    /** Ley 1581: cuando y con que version de la politica el titular autorizo el tratamiento de sus datos. */
+    privacyAcceptedAt: ts('privacy_accepted_at'),
+    privacyPolicyVersion: text('privacy_policy_version'),
     deletedAt: ts('deleted_at'),
     ...stamps(),
   },
@@ -317,6 +320,31 @@ export const idempotencyKeys = pgTable(
   (t) => [primaryKey({ columns: [t.tenantId, t.scope, t.key] })],
 );
 
+/** Intentos fallidos de login por correo (existan o no): bloqueo temporal sin permitir enumerar cuentas. */
+export const loginAttempts = pgTable('login_attempts', {
+  email: text('email').primaryKey(),
+  failedCount: integer('failed_count').notNull().default(0),
+  lockedUntil: ts('locked_until'),
+  lastAttemptAt: ts('last_attempt_at').notNull().defaultNow(),
+});
+
+/** Bitacora de acciones sensibles (exportar/suprimir datos personales). No guarda datos personales. */
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: uuid('id').primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    userId: uuid('user_id'),
+    action: text('action').notNull(),
+    entity: text('entity').notNull(),
+    entityId: text('entity_id'),
+    correlationId: text('correlation_id'),
+    details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('audit_log_tenant_idx').on(t.tenantId, t.createdAt)],
+);
+
 export const schema = {
   tenants,
   locations,
@@ -334,4 +362,6 @@ export const schema = {
   reminderJobs,
   otpCodes,
   idempotencyKeys,
+  loginAttempts,
+  auditLog,
 };

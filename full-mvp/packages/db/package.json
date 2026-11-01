@@ -1,0 +1,32 @@
+{
+  "name": "@agenda/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "migrate": "tsx src/cli.ts migrate",
+    "seed": "tsx src/cli.ts seed",
+    "reset": "tsx src/cli.ts reset"
+  },
+  "dependencies": {
+    "@agenda/contracts": "workspace:*",
+    "@agenda/domain-booking": "workspace:*",
+    "@agenda/whatsapp": "workspace:*",
+    "@electric-sql/pglite": "^0.3.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.44.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.2"
+  }
+}

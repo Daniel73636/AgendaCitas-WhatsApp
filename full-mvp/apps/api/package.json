@@ -2,25 +2,32 @@
   "name": "@agenda/api",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/main.ts",
     "start": "tsx src/main.ts",
     "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@agenda/contracts": "workspace:*",
     "@agenda/db": "workspace:*",
     "@agenda/domain-booking": "workspace:*",
     "@agenda/whatsapp": "workspace:*",
-    "@fastify/cors": "^10.0.1",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-fastify": "^11.0.0",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.44.0",
     "fastify": "^5.2.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "tsx": "^4.19.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "tsx": "^4.19.2",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^3.2.4"
   }
 }
