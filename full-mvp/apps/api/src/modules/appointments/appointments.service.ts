@@ -420,6 +420,8 @@ export class AppointmentsService {
 
   /** Pasarela de pago SIMULADA: confirma el anticipo y pasa la cita de pending a confirmed. */
   async publicPay(token: string): Promise<PublicAppointmentDto> {
+    // Sin pasarela real, este endpoint confirmaria el anticipo sin cobrar: solo existe en DEMO_MODE.
+    if (!this.config.demoMode) throw new AppError('FORBIDDEN', 'El pago en línea aún no está habilitado. Coordina el pago del anticipo directamente con el negocio.');
     const { apt: a0, ctx } = await this.aptFromToken(token);
     await this.releaseExpired(ctx.tenant.id);
     const apt = await this.loadApt(ctx.tenant.id, a0.id);
@@ -773,10 +775,19 @@ export class AppointmentsService {
     return this.core.hydrate(tenantId, rows, ctx.tenant.currency);
   }
 
-  /** Accion de un boton de plantilla de WhatsApp (webhook). */
-  async applyCustomerAction(appointmentId: string, action: 'confirm' | 'reschedule' | 'cancel' | 'accept'): Promise<{ reply: string }> {
+  /** Accion de un boton de plantilla de WhatsApp (webhook). Exige que `fromPhone` coincida con el cliente de la cita. */
+  async applyCustomerAction(appointmentId: string, action: 'confirm' | 'reschedule' | 'cancel' | 'accept', fromPhone?: string): Promise<{ reply: string }> {
     const [apt] = await this.handle.db.select().from(appointments).where(eq(appointments.id, appointmentId)).limit(1);
     if (!apt) return { reply: 'No encontramos esa cita.' };
+    if (fromPhone) {
+      const [cust] = await this.handle.db
+        .select({ phone: customers.phoneE164 })
+        .from(customers)
+        .where(and(eq(customers.id, apt.customerId), eq(customers.tenantId, apt.tenantId)))
+        .limit(1);
+      const norm = (p: string) => p.replace(/\D/g, '');
+      if (!cust || norm(cust.phone) !== norm(fromPhone)) return { reply: 'No encontramos esa cita.' };
+    }
     const ctx = await this.tenants.byId(apt.tenantId);
     const link = `${this.config.publicWebUrl}/${ctx.tenant.slug}/cita/${this.core.token(apt.id)}`;
     if (action === 'confirm') {

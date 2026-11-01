@@ -7,6 +7,7 @@ import { CoreModule } from './core/core.module';
 import { AppointmentsController } from './modules/appointments/appointments.controller';
 import { AppointmentsService } from './modules/appointments/appointments.service';
 import { BookingCoreService } from './modules/appointments/booking-core.service';
+import { AuthService } from './modules/auth/auth.service';
 import { AvailabilityService } from './modules/availability/availability.service';
 import { CatalogService } from './modules/catalog/catalog.service';
 import { CustomersService } from './modules/customers/customers.service';
@@ -58,6 +59,7 @@ import { WebhooksController } from './modules/webhooks.controller';
     HealthController,
   ],
   providers: [
+    AuthService,
     BookingCoreService,
     AvailabilityService,
     CatalogService,

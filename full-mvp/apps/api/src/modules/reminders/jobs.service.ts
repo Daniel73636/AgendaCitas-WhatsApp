@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { CONFIG, type AppConfig } from '../../common/config';
+import { AuthService } from '../auth/auth.service';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { RemindersService, type TickResult } from './reminders.service';
 
@@ -23,6 +24,7 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
     @Inject(CONFIG) private readonly config: AppConfig,
     @Inject(RemindersService) private readonly reminders: RemindersService,
     @Inject(AppointmentsService) private readonly appts: AppointmentsService,
+    @Inject(AuthService) private readonly auth: AuthService,
   ) {}
 
   onModuleInit() {
@@ -41,6 +43,7 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
     this.running = true;
     try {
       const holdsReleased = await this.appts.sweepHolds();
+      await this.auth.purgeAttempts().catch((e) => this.log.error(e));
       const reminders: TickResult = { processed: 0, sent: 0, skipped: 0, failed: 0 };
       for (let batch = 0; batch < 20; batch++) {
         const r = await this.reminders.processDue(100);
