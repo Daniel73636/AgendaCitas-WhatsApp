@@ -13,3 +13,7 @@
 ## 2026-11-01 — Pagos
 
 **Decisión:** Interfaz `PaymentProvider` con implementación `MockPaymentProvider` y stub `WompiPaymentProvider` detrás de `PAYMENTS_PROVIDER=mock|wompi`.
+
+## 2026-11-01 — Test de performance de slots
+
+**Decisión:** El umbral del test de `computeSlots` (1 mes × 10 profesionales) se fija en 500 ms por defecto (`SLOTS_PERF_MS`), no 50/250 ms rígidos. El objetivo de producto sigue siendo < 50 ms; el test evita flakiness en CI Windows.
