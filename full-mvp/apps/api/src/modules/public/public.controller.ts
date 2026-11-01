@@ -16,7 +16,7 @@ import {
   waitlistInput,
 } from '@agenda/contracts';
 import { Public } from '../../common/auth';
-import { CONFIG, type AppConfig } from '../../common/config';
+import { CONFIG, type AppConfig, isMockOtp } from '../../common/config';
 import { RateLimit, RateLimitGuard } from '../../common/rate-limit';
 import { zod } from '../../common/zod.pipe';
 import { TenantContextService } from '../../core/tenant-context.service';
@@ -91,7 +91,7 @@ export class PublicController {
         holdMinutes: ctx.settings.holdMinutes, cancelMinHours: ctx.settings.cancelMinHours,
         rescheduleMinHours: ctx.settings.rescheduleMinHours, maxAdvanceDays: ctx.settings.maxAdvanceDays,
       },
-      otpMode: this.config.otpMode,
+      otpMode: isMockOtp(this.config) ? 'mock' : 'real',
     };
   }
 
