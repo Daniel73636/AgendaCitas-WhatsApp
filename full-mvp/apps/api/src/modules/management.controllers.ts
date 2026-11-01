@@ -20,7 +20,7 @@ import {
 import { type DbHandle, and, appointments, count, eq, locations, staffSchedules, services, tenants, users, verifyPassword } from '@agenda/db';
 import { z } from 'zod';
 import { Auth, type AuthContext, OwnerOnly, Public } from '../common/auth';
-import { CONFIG, type AppConfig } from '../common/config';
+import { CONFIG, type AppConfig, isMockOtp } from '../common/config';
 import { AppError } from '../common/errors';
 import { RateLimit, RateLimitGuard } from '../common/rate-limit';
 import { signToken } from '../common/tokens';
@@ -40,6 +40,7 @@ import { JobsService } from './reminders/jobs.service';
 import { AvailabilityService } from './availability/availability.service';
 import { WaitlistService } from './waitlist/waitlist.service';
 import { Observable, map } from 'rxjs';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 // ---------------------------------------------------------------------------
 // Auth
@@ -99,7 +100,8 @@ export class TenantController {
       currency: ctx.tenant.currency, address: ctx.location.address, timezone: ctx.tz, lat: ctx.location.lat, lng: ctx.location.lng,
       settings: ctx.settings,
       whatsapp: { mode: this.messaging.mode, connected: this.messaging.mode === 'cloud', phoneNumberId: this.config.whatsappPhoneNumberId ?? null },
-      otpMode: this.config.otpMode,
+      otpMode: isMockOtp(this.config) ? ('mock' as const) : ('real' as const),
+      demoMode: this.config.demoMode,
       publicUrl: `${this.config.publicWebUrl}/${ctx.tenant.slug}`,
     };
   }
@@ -314,14 +316,14 @@ export class InternalController {
     @Inject(ClockService) private readonly clock: ClockService,
   ) {}
   @Post('jobs/tick') @HttpCode(200) async tick(@Headers('x-internal-secret') secret?: string) {
-    if (secret !== this.config.internalSecret) throw new AppError('FORBIDDEN', 'Secreto interno invalido.');
+    if (!safeEqual(secret ?? '', this.config.internalSecret)) throw new AppError('FORBIDDEN', 'Secreto interno invalido.');
     return this.jobs.tick();
   }
 }
 
-@Public()
-@Controller('v1')
-export class HealthController {
-  constructor(@Inject(ClockService) private readonly clock: ClockService) {}
-  @Get('health') health() { return { ok: true, service: 'agenda-api', now: this.clock.nowIso() }; }
+/** Comparacion en tiempo constante (evita ataques de temporizacion sobre secretos). */
+function safeEqual(a: string, b: string): boolean {
+  const ha = createHash('sha256').update(a).digest();
+  const hb = createHash('sha256').update(b).digest();
+  return timingSafeEqual(ha, hb);
 }

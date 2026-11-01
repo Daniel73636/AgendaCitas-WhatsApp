@@ -1,5 +1,13 @@
 import { z } from 'zod';
 import { APPOINTMENT_STATUSES } from '@agenda/domain-booking';
+import { esErrorMap } from './zod-es';
+
+// Mensajes de validacion en espanol (los mensajes propios de cada esquema tienen prioridad).
+z.setErrorMap(esErrorMap);
+export { esErrorMap };
+
+/** Version vigente de la politica de privacidad (se guarda con el consentimiento del cliente). */
+export const PRIVACY_POLICY_VERSION = '2026-11-01';
 
 // ---------------------------------------------------------------------------
 // Primitivas
@@ -504,11 +512,13 @@ export type ApiErrorCode =
   | 'OTP_INVALID'
   | 'OTP_REQUIRED'
   | 'RATE_LIMITED'
+  | 'ACCOUNT_LOCKED'
   | 'HAS_FUTURE_APPOINTMENTS'
   | 'CONFLICT'
+  | 'SERVICE_UNAVAILABLE'
   | 'INTERNAL';
 export interface ApiErrorBody {
-  error: { code: ApiErrorCode; message: string; details?: unknown; alternatives?: SlotDto[] };
+  error: { code: ApiErrorCode; message: string; details?: unknown; alternatives?: SlotDto[]; retryAfterSec?: number; correlationId?: string };
 }
 
 export type RealtimeEventType =

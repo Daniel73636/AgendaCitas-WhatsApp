@@ -14,7 +14,6 @@ import {
   AuthController,
   CustomersController,
   EventsController,
-  HealthController,
   InternalController,
   MessagesController,
   PrivateAvailabilityController,
@@ -25,6 +24,7 @@ import {
   TenantController,
   WaitlistController,
 } from './modules/management.controllers';
+import { HealthController } from './modules/health.controller';
 import { OtpService } from './modules/otp/otp.service';
 import { PublicController } from './modules/public/public.controller';
 import { JobsService } from './modules/reminders/jobs.service';
