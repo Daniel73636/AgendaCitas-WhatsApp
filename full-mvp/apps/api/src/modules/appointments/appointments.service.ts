@@ -186,9 +186,9 @@ export class AppointmentsService {
 
   private async notify(ctx: TenantContext, apt: AptRow, template: 'appointment_rescheduled' | 'appointment_canceled' | 'appointment_confirmation') {
     if (!apt.customerId || !apt.consentWhatsapp) return;
-    const [cust] = await this.handle.db.select().from(customers).where(eq(customers.id, apt.customerId)).limit(1);
+    const [cust] = await this.handle.db.select().from(customers).where(and(eq(customers.id, apt.customerId), eq(customers.tenantId, apt.tenantId))).limit(1);
     if (!cust) return;
-    const items = await this.handle.db.select().from(appointmentItems).where(eq(appointmentItems.appointmentId, apt.id));
+    const items = await this.handle.db.select().from(appointmentItems).where(and(eq(appointmentItems.appointmentId, apt.id), eq(appointmentItems.tenantId, apt.tenantId)));
     await this.messaging.sendTemplate({
       tenantId: apt.tenantId, phone: cust.phoneE164, template, appointmentId: apt.id, customerId: cust.id,
       params: {
@@ -277,8 +277,9 @@ export class AppointmentsService {
   private async doConfirm(ctx: TenantContext, input: BookingInput): Promise<PublicAppointmentDto> {
     const tenantId = ctx.tenant.id;
     if (input.website) throw new AppError('VALIDATION_ERROR', 'Solicitud rechazada.');
-    await this.otp.assertVerified(tenantId, input.phone, { otpToken: input.otpToken, otpCode: input.otpCode });
     const now = this.clock.now();
+    const privacy = this.core.privacy(input.privacyAccepted, now);
+    await this.otp.assertVerified(tenantId, input.phone, { otpToken: input.otpToken, otpCode: input.otpCode });
 
     const result = await this.handle.db.transaction(async (tx) => {
       const [apt] = await tx
@@ -288,7 +289,7 @@ export class AppointmentsService {
         .limit(1)
         .for('update');
       if (!apt) throw new AppError('NOT_FOUND', 'La reserva temporal no existe.');
-      const customer = await this.core.upsertCustomer(tx, tenantId, { fullName: input.fullName, phone: input.phone, email: input.email, consent: input.consentWhatsapp, now });
+      const customer = await this.core.upsertCustomer(tx, tenantId, { fullName: input.fullName, phone: input.phone, email: input.email, consent: input.consentWhatsapp, privacy, now });
       if (apt.status !== 'held') {
         if (['confirmed', 'pending'].includes(apt.status) && apt.customerId === customer.id) return { apt, created: false };
         throw new AppError(apt.status === 'canceled' ? 'HOLD_EXPIRED' : 'CONFLICT', apt.status === 'canceled' ? 'El tiempo de reserva vencio. Elige un horario de nuevo.' : 'Esta reserva ya fue procesada.');
@@ -528,7 +529,7 @@ export class AppointmentsService {
       a.expectedVersion ?? apt.version,
     );
     if (a.by === 'customer' && apt.customerId && hours < ctx.policy.fullRefundHours) {
-      await this.handle.db.update(customers).set({ lateCancelCount: sql`${customers.lateCancelCount} + 1` }).where(eq(customers.id, apt.customerId));
+      await this.handle.db.update(customers).set({ lateCancelCount: sql`${customers.lateCancelCount} + 1` }).where(and(eq(customers.id, apt.customerId), eq(customers.tenantId, apt.tenantId)));
     }
     await this.reminders.cancelAll(apt.id);
     this.emitUpdate(updated, 'appointment.canceled');
@@ -722,7 +723,7 @@ export class AppointmentsService {
   private async noShowInternal(ctx: TenantContext, apt: AptRow, expectedVersion?: number): Promise<AptRow> {
     const updated = await this.update(ctx.tenant.id, apt.id, { status: 'no_show' }, expectedVersion);
     if (apt.customerId) {
-      await this.handle.db.update(customers).set({ noShowCount: sql`${customers.noShowCount} + 1` }).where(eq(customers.id, apt.customerId));
+      await this.handle.db.update(customers).set({ noShowCount: sql`${customers.noShowCount} + 1` }).where(and(eq(customers.id, apt.customerId), eq(customers.tenantId, apt.tenantId)));
     }
     await this.reminders.cancelAll(apt.id);
     this.emitUpdate(updated);
@@ -780,6 +781,7 @@ export class AppointmentsService {
     const [apt] = await this.handle.db.select().from(appointments).where(eq(appointments.id, appointmentId)).limit(1);
     if (!apt) return { reply: 'No encontramos esa cita.' };
     if (fromPhone) {
+      if (!apt.customerId) return { reply: 'No encontramos esa cita.' };
       const [cust] = await this.handle.db
         .select({ phone: customers.phoneE164 })
         .from(customers)
@@ -792,7 +794,7 @@ export class AppointmentsService {
     const link = `${this.config.publicWebUrl}/${ctx.tenant.slug}/cita/${this.core.token(apt.id)}`;
     if (action === 'confirm') {
       if (apt.status === 'confirmed') {
-        await this.handle.db.update(appointments).set({ confirmedByCustomer: true, updatedAt: this.clock.now() }).where(eq(appointments.id, apt.id));
+        await this.handle.db.update(appointments).set({ confirmedByCustomer: true, updatedAt: this.clock.now() }).where(and(eq(appointments.id, apt.id), eq(appointments.tenantId, apt.tenantId)));
         this.events.emit(apt.tenantId, 'appointment.updated', { id: apt.id, confirmedByCustomer: true });
         return { reply: `¡Perfecto! Tu asistencia quedo confirmada para el ${dateLabel(apt.startsAt, ctx.tz)} a las ${timeLabel(apt.startsAt, ctx.tz)}.` };
       }

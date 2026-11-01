@@ -73,7 +73,7 @@ export class WebhooksController {
         const parsed = parseButtonPayload(ev.payload);
         if (!parsed) continue;
         const [apt] = await this.handle.db.select().from(appointments).where(eq(appointments.id, parsed.appointmentId)).limit(1);
-        if (!apt) continue;
+        if (!apt?.customerId) continue;
         const [cust] = await this.handle.db
           .select({ phone: customers.phoneE164 })
           .from(customers)

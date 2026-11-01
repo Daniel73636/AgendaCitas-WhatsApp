@@ -37,9 +37,9 @@ const bad = await j('POST', `/v1/public/${SLUG}/otp/verify`, { phone, code: '000
 ok('OTP incorrecto rechazado', bad.status === 422);
 const ver = await j('POST', `/v1/public/${SLUG}/otp/verify`, { phone, code: '123456' });
 ok('OTP 123456 verificado', ver.json.verified === true);
-const book = await j('POST', `/v1/public/${SLUG}/bookings`, { holdId: hold.json.holdId, fullName: 'Cliente Smoke', phone, consentWhatsapp: true, otpToken: ver.json.otpToken }, { 'idempotency-key': 'k-' + hold.json.holdId });
+const book = await j('POST', `/v1/public/${SLUG}/bookings`, { holdId: hold.json.holdId, fullName: 'Cliente Smoke', phone, consentWhatsapp: true, privacyAccepted: true, otpToken: ver.json.otpToken }, { 'idempotency-key': 'k-' + hold.json.holdId });
 ok('POST bookings', (book.status === 201 || book.status === 200) && ['confirmed', 'pending'].includes(book.json.status), book.json.status);
-const book2 = await j('POST', `/v1/public/${SLUG}/bookings`, { holdId: hold.json.holdId, fullName: 'Cliente Smoke', phone, consentWhatsapp: true, otpToken: ver.json.otpToken }, { 'idempotency-key': 'k-' + hold.json.holdId });
+const book2 = await j('POST', `/v1/public/${SLUG}/bookings`, { holdId: hold.json.holdId, fullName: 'Cliente Smoke', phone, consentWhatsapp: true, privacyAccepted: true, otpToken: ver.json.otpToken }, { 'idempotency-key': 'k-' + hold.json.holdId });
 ok('Idempotency-Key: segundo envio devuelve la misma cita', book2.json.id === book.json.id);
 const tokenView = await j('GET', `/v1/public/appointments/${book.json.token}`);
 ok('GET public/appointments/{token}', tokenView.status === 200 && tokenView.json.id === book.json.id);

@@ -14,6 +14,7 @@ import {
   lte,
   or,
   services,
+  staff,
   staffServices,
   uuidv7,
   waitlistEntries,
@@ -58,10 +59,15 @@ export class WaitlistService {
     const now = this.clock.now();
     const [svc] = await db.select({ id: services.id }).from(services).where(and(eq(services.tenantId, ctx.tenant.id), eq(services.id, input.serviceId), eq(services.visiblePublic, true))).limit(1);
     if (!svc) throw new AppError('NOT_FOUND', 'Servicio no disponible.');
+    if (input.staffId) {
+      const [stf] = await db.select({ id: staff.id }).from(staff).where(and(eq(staff.tenantId, ctx.tenant.id), eq(staff.id, input.staffId), eq(staff.active, true), isNull(staff.deletedAt))).limit(1);
+      if (!stf) throw new AppError('NOT_FOUND', 'Profesional no disponible.');
+    }
     if (Date.parse(input.windowEnd) <= Math.max(Date.parse(input.windowStart), now.getTime())) {
       throw new AppError('VALIDATION_ERROR', 'La ventana de fechas debe estar en el futuro.');
     }
-    const customer = await this.core.upsertCustomer(db, ctx.tenant.id, { fullName: input.fullName, phone: input.phone, consent: input.consentWhatsapp, now });
+    const privacy = this.core.privacy(input.privacyAccepted, now);
+    const customer = await this.core.upsertCustomer(db, ctx.tenant.id, { fullName: input.fullName, phone: input.phone, consent: input.consentWhatsapp, privacy, now });
     const active = await db
       .select({ id: waitlistEntries.id })
       .from(waitlistEntries)

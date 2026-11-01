@@ -91,6 +91,10 @@ export default async function BusinessPage({ params }: { params: Promise<{ slug:
         </section>
       </div>
 
+      <p className="px-4 pb-4 pt-2 text-center text-xs text-muted-foreground">
+        <Link href={`/${slug}/privacidad`} className="underline underline-offset-2">Política de privacidad</Link>
+      </p>
+
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur safe-bottom">
         <div className="mx-auto max-w-2xl px-4 pt-3">
           <Link href={`/${slug}/reservar`} className="flex h-12 w-full items-center justify-center rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:bg-primary/90 active:scale-[0.99]">

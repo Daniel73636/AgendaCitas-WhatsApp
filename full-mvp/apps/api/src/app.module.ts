@@ -11,6 +11,7 @@ import { AuthService } from './modules/auth/auth.service';
 import { AvailabilityService } from './modules/availability/availability.service';
 import { CatalogService } from './modules/catalog/catalog.service';
 import { CustomersService } from './modules/customers/customers.service';
+import { PrivacyService } from './modules/customers/privacy.service';
 import {
   AuthController,
   CustomersController,
@@ -69,6 +70,7 @@ import { WebhooksController } from './modules/webhooks.controller';
     WaitlistService,
     AppointmentsService,
     CustomersService,
+    PrivacyService,
     ReportsService,
     JobsService,
   ],

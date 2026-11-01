@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, Inject, Param, Patch, Post, Put, Query, Sse, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, Inject, Param, Patch, Post, Put, Query, Req, Res, Sse, UseGuards } from '@nestjs/common';
 import {
   type AuthSession,
   availabilityQuery,
@@ -40,6 +40,7 @@ import { RemindersService } from './reminders/reminders.service';
 import { JobsService } from './reminders/jobs.service';
 import { AvailabilityService } from './availability/availability.service';
 import { WaitlistService } from './waitlist/waitlist.service';
+import { PrivacyService } from './customers/privacy.service';
 import { Observable, map } from 'rxjs';
 import { createHash, timingSafeEqual } from 'node:crypto';
 
@@ -209,6 +210,7 @@ export class CustomersController {
   constructor(
     @Inject(CustomersService) private readonly customers: CustomersService,
     @Inject(AppointmentsService) private readonly appts: AppointmentsService,
+    @Inject(PrivacyService) private readonly privacy: PrivacyService,
   ) {}
   @Get() list(@Auth() a: AuthContext, @Query('q') q?: string) { return this.customers.list(a.tenantId, q); }
   @Post() create(@Auth() a: AuthContext, @Body(zod(customerInput)) b: ReturnType<typeof customerInput.parse>) { return this.customers.create(a.tenantId, b); }
@@ -219,6 +221,19 @@ export class CustomersController {
   @Get(':id/timeline') async timeline(@Auth() a: AuthContext, @Param('id') id: string) {
     const [customer, appointmentsList, messages] = await Promise.all([this.customers.get(a.tenantId, id), this.appts.forCustomer(a.tenantId, id), this.customers.messages(a.tenantId, id)]);
     return { customer, appointments: appointmentsList, messages };
+  }
+  /** Ley 1581: portabilidad/acceso. Solo owner. Descarga un JSON con todos los datos del cliente. */
+  @OwnerOnly() @Get(':id/export') async exportData(
+    @Auth() a: AuthContext, @Param('id') id: string, @Req() req: { id: string },
+    @Res({ passthrough: true }) res: { header: (k: string, v: string) => unknown },
+  ) {
+    const data = await this.privacy.exportData(a, id, req.id);
+    res.header('Content-Disposition', `attachment; filename="cliente-${id}.json"`);
+    return data;
+  }
+  /** Ley 1581: supresion (anonimiza). Solo owner. `?force=true` cancela las citas vigentes. */
+  @OwnerOnly() @Delete(':id') @HttpCode(200) erase(@Auth() a: AuthContext, @Param('id') id: string, @Query('force') force: string | undefined, @Req() req: { id: string }) {
+    return this.privacy.erase(a, id, { force: force === 'true' || force === '1' }, req.id);
   }
   @Post(':id/merge') @HttpCode(200) merge(@Auth() a: AuthContext, @Param('id') id: string, @Body(zod(customerMergeInput)) b: { intoCustomerId: string }) {
     return this.customers.merge(a.tenantId, id, b.intoCustomerId);
@@ -238,6 +253,10 @@ export class MessagesController {
   @Get() conversations(@Auth() a: AuthContext) { return this.messaging.conversations(a.tenantId); }
   @Get('thread') thread(@Auth() a: AuthContext, @Query('phone') phone: string) { return this.messaging.thread(a.tenantId, phone.replace(/\s/g, '').replace(/^(?!\+)/, '+')); }
   @Post('reply') @HttpCode(200) async reply(@Auth() a: AuthContext, @Body(zod(messageReplyInput)) b: ReturnType<typeof messageReplyInput.parse>) {
+    if (b.appointmentId) {
+      const [apt] = await this.handle.db.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.id, b.appointmentId), eq(appointments.tenantId, a.tenantId))).limit(1);
+      if (!apt) throw new AppError('NOT_FOUND', 'Cita no encontrada.');
+    }
     return this.messaging.sendText({ tenantId: a.tenantId, phone: b.phone, body: b.body, appointmentId: b.appointmentId ?? null });
   }
   /** Solo demo/mock: simula un mensaje entrante del cliente (o un clic de boton). */

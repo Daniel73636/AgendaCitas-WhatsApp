@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { AppointmentDto } from '@agenda/contracts';
+import { type AppointmentDto, PRIVACY_POLICY_VERSION } from '@agenda/contracts';
 import {
   type Db,
   type DbHandle,
@@ -67,6 +67,15 @@ export class BookingCoreService {
     @Inject(DB_HANDLE) readonly handle: DbHandle,
     @Inject(CONFIG) private readonly config: AppConfig,
   ) {}
+
+  /** Ley 1581: exige (si esta configurado) la autorizacion de tratamiento de datos y devuelve lo que se registra. */
+  privacy(accepted: boolean | undefined, now: Date): { at: Date; version: string } | undefined {
+    if (accepted) return { at: now, version: PRIVACY_POLICY_VERSION };
+    if (this.config.privacyConsentRequired) {
+      throw new AppError('VALIDATION_ERROR', 'Debes aceptar la politica de tratamiento de datos personales para continuar.');
+    }
+    return undefined;
+  }
 
   token(appointmentId: string): string {
     return signAppointmentToken(appointmentId, this.config.authSecret);
@@ -148,7 +157,7 @@ export class BookingCoreService {
   async upsertCustomer(
     db: Db,
     tenantId: string,
-    d: { fullName: string; phone: string; email?: string | null | undefined; consent?: boolean | undefined; now: Date },
+    d: { fullName: string; phone: string; email?: string | null | undefined; consent?: boolean | undefined; privacy?: { at: Date; version: string } | undefined; now: Date },
   ): Promise<CustomerRow> {
     const find = async () => {
       const [c] = await db.select().from(customers).where(and(eq(customers.tenantId, tenantId), eq(customers.phoneE164, d.phone))).limit(1);
@@ -158,6 +167,7 @@ export class BookingCoreService {
     if (existing) {
       const patch: Partial<typeof customers.$inferInsert> = {};
       if (d.consent && !existing.consentWhatsapp) patch.consentWhatsapp = true;
+      if (d.privacy) { patch.privacyAcceptedAt = d.privacy.at; patch.privacyPolicyVersion = d.privacy.version; }
       if (d.email && !existing.email) patch.email = d.email;
       if (existing.deletedAt) patch.deletedAt = null;
       if (Object.keys(patch).length) {
@@ -171,6 +181,7 @@ export class BookingCoreService {
         .insert(customers)
         .values({
           id: uuidv7(), tenantId, fullName: d.fullName, phoneE164: d.phone, email: d.email || null, consentWhatsapp: d.consent ?? false,
+          privacyAcceptedAt: d.privacy?.at ?? null, privacyPolicyVersion: d.privacy?.version ?? null,
           createdAt: d.now, updatedAt: d.now,
         })
         .returning();

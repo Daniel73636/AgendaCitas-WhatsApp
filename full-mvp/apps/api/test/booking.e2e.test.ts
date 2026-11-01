@@ -26,7 +26,7 @@ async function bookFlow(startsAt: string, serviceIds: string[], staffId = 'any',
   await t.call('POST', `/v1/public/${SLUG}/otp/request`, { body: { phone: who.phone } });
   const ver = await t.call('POST', `/v1/public/${SLUG}/otp/verify`, { body: { phone: who.phone, code: '123456' } });
   const book = await t.call('POST', `/v1/public/${SLUG}/bookings`, {
-    body: { holdId: hold.json.holdId, fullName: who.name, phone: who.phone, consentWhatsapp: true, otpToken: ver.json.otpToken },
+    body: { holdId: hold.json.holdId, fullName: who.name, phone: who.phone, consentWhatsapp: true, privacyAccepted: true, otpToken: ver.json.otpToken },
   });
   return { hold, book, phone: who.phone };
 }
@@ -100,11 +100,11 @@ describe('flujo publico completo', () => {
     const hold = await t.call('POST', `/v1/public/${SLUG}/holds`, { body: { serviceIds: [svcCorte.id], staffId: 'any', startsAt: list[3]!.start } });
     expect(hold.status).toBe(201);
     expect((await t.call('POST', `/v1/public/${SLUG}/otp/verify`, { body: { phone: p, code: '999999' } })).json.error.code).toBe('OTP_INVALID');
-    const noOtp = await t.call('POST', `/v1/public/${SLUG}/bookings`, { body: { holdId: hold.json.holdId, fullName: 'Sin Otp', phone: p, consentWhatsapp: true } });
+    const noOtp = await t.call('POST', `/v1/public/${SLUG}/bookings`, { body: { holdId: hold.json.holdId, fullName: 'Sin Otp', phone: p, consentWhatsapp: true, privacyAccepted: true } });
     expect(noOtp.json.error.code).toBe('OTP_REQUIRED');
-    const bot = await t.call('POST', `/v1/public/${SLUG}/bookings`, { body: { holdId: hold.json.holdId, fullName: 'Bot', phone: p, consentWhatsapp: true, otpCode: '123456', website: 'http://spam' } });
+    const bot = await t.call('POST', `/v1/public/${SLUG}/bookings`, { body: { holdId: hold.json.holdId, fullName: 'Bot', phone: p, consentWhatsapp: true, privacyAccepted: true, otpCode: '123456', website: 'http://spam' } });
     expect(bot.status).toBe(400);
-    const good = await t.call('POST', `/v1/public/${SLUG}/bookings`, { body: { holdId: hold.json.holdId, fullName: 'Con Otp', phone: p, consentWhatsapp: true, otpCode: '123456' } });
+    const good = await t.call('POST', `/v1/public/${SLUG}/bookings`, { body: { holdId: hold.json.holdId, fullName: 'Con Otp', phone: p, consentWhatsapp: true, privacyAccepted: true, otpCode: '123456' } });
     expect(good.status).toBe(201);
   });
 
@@ -114,7 +114,7 @@ describe('flujo publico completo', () => {
     const hold = await t.call('POST', `/v1/public/${SLUG}/holds`, { body: { serviceIds: [svcCorte.id], staffId: 'any', startsAt: list[8]!.start }, headers: { 'idempotency-key': 'h1' } });
     const hold2 = await t.call('POST', `/v1/public/${SLUG}/holds`, { body: { serviceIds: [svcCorte.id], staffId: 'any', startsAt: list[8]!.start }, headers: { 'idempotency-key': 'h1' } });
     expect(hold2.json.holdId).toBe(hold.json.holdId);
-    const body = { holdId: hold.json.holdId, fullName: 'Doble Clic', phone: p, consentWhatsapp: true, otpCode: '123456' };
+    const body = { holdId: hold.json.holdId, fullName: 'Doble Clic', phone: p, consentWhatsapp: true, privacyAccepted: true, otpCode: '123456' };
     const [a, b] = await Promise.all([
       t.call('POST', `/v1/public/${SLUG}/bookings`, { body, headers: { 'idempotency-key': 'b1' } }),
       t.call('POST', `/v1/public/${SLUG}/bookings`, { body, headers: { 'idempotency-key': 'b1' } }),
@@ -325,7 +325,7 @@ describe('lista de espera', () => {
     const { book } = await bookFlow(target.start, [svcCorte.id], staffCamila.id);
     const wp = phone();
     const join = await t.call('POST', `/v1/public/${SLUG}/waitlist`, {
-      body: { fullName: 'En Espera', phone: wp, serviceId: svcCorte.id, staffId: staffCamila.id, windowStart: new Date(Date.parse(target.start) - 3_600_000).toISOString(), windowEnd: new Date(Date.parse(target.start) + 3_600_000).toISOString() },
+      body: { fullName: 'En Espera', phone: wp, serviceId: svcCorte.id, staffId: staffCamila.id, windowStart: new Date(Date.parse(target.start) - 3_600_000).toISOString(), windowEnd: new Date(Date.parse(target.start) + 3_600_000).toISOString(), privacyAccepted: true },
     });
     expect(join.status).toBe(201);
     await t.call('POST', `/v1/appointments/${book.json.id}/cancel`, { token: admin, body: {} });
