@@ -42,6 +42,7 @@ export class CatalogService {
     const { db } = this.handle;
     const now = this.clock.now();
     const id = uuidv7();
+    await this.assertStaffInTenant(tenantId, input.staffIds ?? []);
     const [row] = await db
       .insert(services)
       .values({
@@ -59,6 +60,7 @@ export class CatalogService {
   async patchService(tenantId: string, id: string, input: Partial<ServiceInputT>): Promise<ServiceDto> {
     const { db } = this.handle;
     const { staffIds, ...rest } = input;
+    await this.assertStaffInTenant(tenantId, staffIds ?? []);
     const [row] = await db
       .update(services)
       .set({ ...rest, updatedAt: this.clock.now() })
@@ -85,13 +87,21 @@ export class CatalogService {
     const existing = await db.select().from(staffServices).where(and(eq(staffServices.tenantId, tenantId), eq(staffServices.serviceId, serviceId)));
     const keep = new Set(staffIds);
     const toRemove = existing.filter((e) => !keep.has(e.staffId)).map((e) => e.staffId);
-    if (toRemove.length) await db.delete(staffServices).where(and(eq(staffServices.serviceId, serviceId), inArray(staffServices.staffId, toRemove)));
+    if (toRemove.length) await db.delete(staffServices).where(and(eq(staffServices.tenantId, tenantId), eq(staffServices.serviceId, serviceId), inArray(staffServices.staffId, toRemove)));
     const have = new Set(existing.map((e) => e.staffId));
     const toAdd = staffIds.filter((s) => !have.has(s));
     if (toAdd.length) {
-      const valid = await db.select({ id: staff.id }).from(staff).where(and(eq(staff.tenantId, tenantId), inArray(staff.id, toAdd)));
-      if (valid.length) await db.insert(staffServices).values(valid.map((v) => ({ tenantId, staffId: v.id, serviceId })));
+      await this.assertStaffInTenant(tenantId, toAdd);
+      await db.insert(staffServices).values([...new Set(toAdd)].map((id) => ({ tenantId, staffId: id, serviceId })));
     }
+  }
+
+  /** Todos los profesionales indicados deben pertenecer al negocio. */
+  private async assertStaffInTenant(tenantId: string, ids: string[]) {
+    const unique = [...new Set(ids)];
+    if (!unique.length) return;
+    const valid = await this.handle.db.select({ id: staff.id }).from(staff).where(and(eq(staff.tenantId, tenantId), isNull(staff.deletedAt), inArray(staff.id, unique)));
+    if (valid.length !== unique.length) throw new AppError('NOT_FOUND', 'Alguno de los profesionales no existe en tu negocio.');
   }
 
   // ---- Profesionales (lectura) ----
