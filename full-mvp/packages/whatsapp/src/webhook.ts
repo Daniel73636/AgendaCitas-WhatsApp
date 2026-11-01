@@ -1,7 +1,26 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
 export type InboundEvent =
   | { type: 'text'; from: string; text: string; waMessageId: string }
   | { type: 'button'; from: string; payload: string; text: string; waMessageId: string }
   | { type: 'status'; waMessageId: string; status: 'sent' | 'delivered' | 'read' | 'failed'; errorCode?: string };
+
+/**
+ * Verifica `X-Hub-Signature-256` de Meta (HMAC-SHA256 del cuerpo crudo).
+ * Comparacion en tiempo constante; sin cabecera o secreto invalido ⇒ false.
+ */
+export function verifyWebhookSignature(rawBody: Buffer, signatureHeader: string | undefined, appSecret: string): boolean {
+  if (!appSecret || !signatureHeader?.startsWith('sha256=')) return false;
+  const expected = createHmac('sha256', appSecret).update(rawBody).digest('hex');
+  const actual = signatureHeader.slice('sha256='.length);
+  try {
+    const a = Buffer.from(actual, 'utf8');
+    const b = Buffer.from(expected, 'utf8');
+    return a.length === b.length && timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
 
 /** Parsea el cuerpo del webhook de la WhatsApp Cloud API a eventos simples. */
 export function parseWebhook(payload: unknown): InboundEvent[] {
