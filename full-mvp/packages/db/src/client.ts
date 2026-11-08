@@ -41,7 +41,7 @@ export async function createDb(opts: CreateDbOptions = {}): Promise<DbHandle> {
   const { PGlite } = await import('@electric-sql/pglite');
   const { btree_gist } = await import('@electric-sql/pglite/contrib/btree_gist');
   const { drizzle } = await import('drizzle-orm/pglite');
-  const client = new PGlite(opts.pgliteDir || undefined, { extensions: { btree_gist } });
+  const client = new PGlite({ ...(opts.pgliteDir ? { dataDir: opts.pgliteDir } : {}), extensions: { btree_gist } });
   await client.waitReady;
   const db = drizzle(client, { schema }) as unknown as Db;
   return {

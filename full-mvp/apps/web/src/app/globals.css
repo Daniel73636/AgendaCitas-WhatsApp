@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 270 30% 98%;
+  --foreground: 255 28% 14%;
+  --card: 0 0% 100%;
+  --muted: 262 25% 95%;
+  --muted-foreground: 255 10% 42%;
+  --border: 262 20% 90%;
+  --ring: 262 83% 58%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 262 40% 94%;
+  --secondary-foreground: 262 60% 35%;
+  --destructive: 0 72% 50%;
+  --success: 152 60% 32%;
+  --warning: 40 96% 56%;
+  --warning-foreground: 30 80% 22%;
+  --info: 210 80% 45%;
+  color-scheme: light;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+html { scroll-behavior: smooth; }
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+/* respeta la barra de gestos / notch en Android e iOS */
+.safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 0.75rem); }
+.safe-top { padding-top: env(safe-area-inset-top); }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+.cap-first::first-letter { text-transform: uppercase; }
